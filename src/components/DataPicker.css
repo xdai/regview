@@ -1,0 +1,51 @@
+/*
+ * Picker button container
+ */
+div#data-source {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  margin: auto;
+  width: 650px;
+  height: 200px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-column-gap: 50px;
+}
+
+/*
+ * Data picker buttons
+ */
+div#data-source .data-picker {
+  font-size: 1.25em;
+  font-weight: 700;
+  color: white;
+
+  height: 200px;
+  width: 300px;
+  border-radius: 4px;
+
+  text-align: center;
+  line-height: 200px;
+
+  background-color: #fc913a;
+  display: inline-block;
+  cursor: pointer;
+}
+
+div#data-source .data-picker:hover {
+	background-color: #ff4e50;
+}
+
+div#data-source .data-picker input {
+	display: none;
+}
+
+.center-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}

@@ -1,0 +1,125 @@
+{
+	"group": [
+		{
+			"name": "Capability/",
+			"parent": "/",
+			"offset": "0x60000000"
+		}, {
+			"name": "Operational/",
+			"parent": "/",
+			"offset": "0x70000000"
+		}, {
+			"name": "Runtime/",
+			"parent": "/",
+			"offset": "0x80000000"
+		}, {
+			"name": "Ender/",
+			"parent": "/Capability/",
+			"offset": "0x65000000"
+		}
+	],
+	"register":	[
+		{
+			"name": "CAPLENGTH",
+			"parent": "/Capability/Ender/",
+			"desc_short": "Capability Registers Length",
+			"desc_long": "This register is used as an offset to add to register base to find the beginning of the Operational Register Space.",
+			"offset": "0x10",
+			"size": 1,
+			"fields":
+			[
+				{
+					"bits": [0,7],
+					"name": "Length",
+					"meaning": "The offset to add to register base to find the beginning of the Operational Register Space."
+				}
+			]
+		}, {
+			"name": "HCSPARAMS1",
+			"parent": "/Capability/",
+			"desc_short": "Structural Parameters 1",
+			"desc_long": "This register defines basic structural parameters supported by this xHC implementation: Number of Device Slots support, Interrupters, Root Hub ports, etc.",
+			"offset": "0x04",
+			"size": 4,
+			"fields":
+			[
+				{
+					"bits": [0,7],
+					"name": "MaxSlots",
+					"meaning": "Number of Device Slots."
+				},
+				{
+					"bits": [8,18],
+					"name": "MaxIntrs",
+					"meaning": "Number of Interrupters."
+				},
+				{
+					"bits": [19,23],
+					"name": "Rsvd",
+					"meaning": "Reserved."
+				},
+				{
+					"bits": [24,31],
+					"name": "MaxPorts",
+					"meaning": "Number of Ports."
+				}
+			]
+		}, {
+			"name": "USBCMD",
+			"parent": "/Operational/",
+			"offset": "0x1F",
+			"size": 4,
+			"desc_short": "USB Command Register",
+			"desc_long": "The Command Register indicates the command to be executed by the serial bus host controller. Writing to the register causes a command to be executed.",
+
+			"fields" :
+			[
+				{
+					"name": "R/S",
+					"bits": [0, 0],
+					"meaning": "Run/Stop"
+				},{
+					"name": "HCRST",
+					"bits": [1, 1],
+					"meaning": "Host Controller Reset"
+				},{
+					"name": "INTE",
+					"bits": [2, 2],
+					"meaning": "Interrupter Enable"
+				},{
+					"name": "HSEE",
+					"bits": [3, 3],
+					"meaning": "Host System Error Enable"
+				},{
+					"name": "LHCRST",
+					"bits": [7, 7],
+					"meaning": "Light Host Controller Reset"
+				},{
+					"name": "CSS",
+					"bits": [8, 8],
+					"meaning": "Controller Save State"
+				},{
+					"name": "CRS",
+					"bits": [9, 9],
+					"meaning": "Controller Restore State"
+				},{
+					"name": "EWE",
+					"bits": [10, 10],
+					"meaning": "Enable Wrap Event"
+				},{
+					"name": "EU3S",
+					"bits": [11, 11],
+					"meaning": "Enable U3 MFINDEX Stop"
+				},{
+					"name": "SPE",
+					"bits": [12, 12],
+					"meaning": "Stopped - Short Packet Enable"
+				},{
+					"name": "CME",
+					"bits": [13, 13],
+					"meaning": "CEM Enable"
+				}
+			]
+		}
+	]
+}

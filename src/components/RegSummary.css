@@ -1,0 +1,10 @@
+.reg-summary {
+	background-color: #88d8b0;
+	margin: 10px 0px 0px 10px;
+	padding: 5px;
+	border-radius: 3px;
+ 	cursor: pointer;
+
+	display: grid;
+	grid-template-columns: 150px auto 100px 50px;
+}
