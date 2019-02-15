@@ -75,11 +75,13 @@ class RegisterViewer extends Component {
 	}
 
 	getDescription = () => {
+		const data = this.props.data;
+		
 		return (
 			<Fragment>
-				<p>Address: 0x{this.props.address.toString(16).toUpperCase()}</p>
-				<p>{this.props.data.desc_short}</p>
-				<p>{this.props.data.desc_long}</p>
+				<p>Address: 0x{data.address.toString(16).toUpperCase()}</p>
+				<p>{data.desc_short}</p>
+				<p>{data.desc_long}</p>
 			</Fragment>
 		);
 	}

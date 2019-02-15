@@ -64,7 +64,7 @@ class DataPicker extends Component {
 
 			reader.onload = (e) => {
     			db.import(JSON.parse(reader.result)).then(() => {
-    				history.push('/view/group');
+    				history.push('/view/');
     			});
     		};
 

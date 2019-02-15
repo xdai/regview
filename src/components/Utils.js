@@ -9,7 +9,6 @@ export function num2hexstr(n) {
 	return "0x" + ("00000000" + n.toString(16)).toUpperCase().substr(-8);
 }
 
-
 export function getCoordinate(offset, width) {
 	const row = Math.floor(offset / width) + 1;
 	const col = width - offset % width;
@@ -21,14 +20,15 @@ export function isInRange(n, range) {
 	return (range[0] <= n && n <= range[1]) || (range[1] <= n && n <= range[0]);
 }
 
-export class Path {
-	constructor(str) {
-		this.raw = str;
-		this.isRegister = !str.endsWith('/');
-		this.segs = str.split('/');
+export class Record {
+	constructor(db, path) {
+		this.db   = db;
+		this.path = path;
+		this.type = path.endsWith('/') ? 'group' : 'register';
+		this.segs = path.split('/');
 
 		this.segs.shift();
-		if (!this.isRegister) {
+		if (this.type === 'group') {
 			this.segs.pop(); // remove the tailing empty string
 		}
 
@@ -36,14 +36,14 @@ export class Path {
 	}
 
 	getParent = () => {
-		if (this.raw === '/') {
+		if (this.path === '/') {
 			return null;
 		} else {
 			let val = '/';
 			for (let i = 0; i < this.segs.length - 1; i++) {
 				val += this.segs[i] + '/';
 			}
-			return new Path(val);
+			return new Record(this.db, val);
 		}
 	}
 
@@ -55,33 +55,58 @@ export class Path {
 			for (let i = 1; i <= n; i++) {
 				val += this.segs[i-1] + '/';
 			}
-			return new Path(val);
+			return new Record(this.db, val);
 		}
 	}
 
+	load = () => {
+		return this.db.get(this.path).then((data) => {
+			if (data) {
+				return this.getBase().then((base) => {
+					data.address = base + parseInt(data.offset, 16);
+					return data;
+				})
+			} else {
+				return null;
+			}
+		});
+	}
+	
 	// Async operation, returns a promise
-	getAddress = (db) => {
+	getBase = () => {
 		const parent = this.getParent();
-			
+
 		if (parent) {
-			return db.get(this.raw).then((data) => {
-				if (data) {
-					return parent.getAddress(db).then((base) => {
-						if (base === null) {
-							return null;
-						} else {
-							return base + parseInt(data.offset, 16);
-						}
-					});
-				} else {
-					return null;
-				}
-			})
+			return parent.getAddress();
 		} else {
 			return new Promise((resolve, reject) => {
 				resolve(0);
 			});
 		}
+	}
+	
+	// Async operation, returns a promise
+	getOffset = () => {
+		return this.db.get(this.path).then((data) => {
+			if (data) {
+				return parseInt(data.offset, 16);
+			} else {
+				return null;
+			}
+		});
+	}
+
+	// Async operation, returns a promise
+	getAddress = () => {
+		return this.getOffset().then((offset) => {
+			if (offset === null) { // non-exist record
+				return null;
+			} else { // record exists, which implies that parent also exists
+				return this.getBase().then((base) => {
+					return base + offset;
+				})
+			}
+		});
 	}
 }
 
@@ -93,63 +118,22 @@ export function withReload(WrappedComponent) {
 			super(props);
 
 			this.state = {
-				data: undefined,
-				address: undefined
+				data: undefined
 			};
 		}
 
-		getCurrentPath = () => {
+		getCurrentRecord = () => {
 			let segs = this.props.location.pathname.split('/');
 			segs.splice(1,1); // remove the `op` part
-			const key = segs.join('/');
-			return new Path(key);
-		}
-
-		// Address == Base + Offset
-		// Async operation, returns a promise
-		getBase = (path) => {
-			const db = this.context;
-			const parent = path.getParent();
-
-			if (parent) {
-				return parent.getAddress(db);
-			} else {
-				return new Promise((resolve, reject) => {
-					resolve(0);
-				});
-			}
+			return new Record(this.context, segs.join('/'));
 		}
 
 		load() {
-			const db = this.context;
-			const path = this.getCurrentPath();
-
-			db.get(path.raw).then((data) => {
-				if (data) {
-					console.log(data);
-					return this.getBase(path).then((base) => {
-						console.log(base);
-						if (base === null) {
-							this.setState({
-								data: null,
-								address: undefined
-							});
-						} else {
-							console.log(data.offset);
-							this.setState({
-								data: data,
-								address: base + parseInt(data.offset, 16)
-							});
-						}
-					});
-				} else {
-					this.setState({
-						data: null,
-						address: undefined
-					});
-				}
+			this.getCurrentRecord().load().then((data) => {
+				this.setState({
+					data: data
+				});
 			});
-
 		}
 		
 		componentDidMount() {
@@ -167,7 +151,7 @@ export function withReload(WrappedComponent) {
 				return null;
 			} else {
 				console.log(this.state);
-				return <WrappedComponent path={this.getCurrentPath()} address={this.state.address} data={this.state.data} {...this.props} />;
+				return <WrappedComponent data={this.state.data} {...this.props} />;
 			}
 		}
 	};

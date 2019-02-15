@@ -6,7 +6,7 @@ import { RegContext } from '../RegDb';
 
 import RegSummary from './RegSummary';
 
-import { Path } from './Utils';
+import { Record } from './Utils';
 
 import './GroupViewer.css';
 

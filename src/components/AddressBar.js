@@ -50,8 +50,6 @@ class AddressBar extends Component { // breadcrumb navigation
 			actions = 
 				<Fragment>
 					<Link to={"/edit/" + addr}>Edit</Link>
-					<Link to={"/edit/" + addr}>Edit</Link>
-					<Link to={"/edit/" + addr}>Edit</Link>
 				</Fragment>;
 		}
 
