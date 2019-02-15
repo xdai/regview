@@ -126,15 +126,9 @@ class RegisterViewer extends Component {
 
 		let extraHeader = [];
 		this.state.decodeArray.forEach((n, i) => {
-			if (i === this.state.focus[0]) {
+			if (i === this.state.focus[0] || i === this.state.focus[1]) {
 				extraHeader.push(
-					<th key={i} className="focus-header-0">
-						{num2hexstr(n)}
-					</th>
-				);
-			} else if (i === this.state.focus[1]) {
-				extraHeader.push(
-					<th key={i} className="focus-header-1">
+					<th key={i} className="focus-header">
 						{num2hexstr(n)}
 					</th>
 				);

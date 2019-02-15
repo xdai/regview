@@ -12,10 +12,11 @@
 table {
 	width: 800px;
 	margin: 50px auto;
+	overflow: hidden;
 }
 
 table, th, td {
-  border: 1px solid black;
+  border: 1px solid #ccc;
   border-collapse: collapse;
   text-align: left;
 }
@@ -25,7 +26,8 @@ th, td {
 }
 
 th {
-	background: #999;
+	background: #00cccc;
+	color: #fff;
 }
 
 .warning {
@@ -34,18 +36,35 @@ th {
 	background-color: #ffe7e8;
 }
 
-th.focus-header-0 {
-	background-color: #5bc0de;
-}
-
-th.focus-header-1 {
-	background-color: #5cb85c;
+th.focus-header {
+	background-color: orchid;
 }
 
 th.value-header {
 	cursor: pointer;
+	background-color: cadetblue
 }
 
 td.highlight-field {
-	background-color: #ffe7e8;
+	background-color: orchid;
+	color: #fff;
+}
+
+tr:hover {
+	background-color: #ffa;
+}
+  
+td, th {
+	position: relative;
+}
+td:hover::after,
+th:hover::after {
+	content: "";
+	position: absolute;
+	background-color: #ffa;
+	left: 0;
+	top: -5000px;
+	height: 10000px;
+	width: 100%;
+	z-index: -1;
 }
