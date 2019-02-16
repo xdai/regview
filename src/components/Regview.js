@@ -42,8 +42,8 @@ class Regview extends Component {
 					<Route path="/:op/*" component={AddressBar} />
 					<Switch>
 						<Route path="/"                component={DataPicker}     exact />
-						<Route path="/view/"           component={GroupViewer}    exact />
-						<Route path="/view/:path(.+/)" component={GroupViewer}          />
+						<Route path="/view/"           component={withReload(GroupViewer)}    exact />
+						<Route path="/view/:path(.+/)" component={withReload(GroupViewer)}          />
 						<Route path="/view/:path(.+)"  component={withReload(RegisterViewer)}       />
 						<Route path="/edit/:path(.+/)" component={withReload(GroupEditor)}             />
 						<Route path="/edit/:path(.+)"  component={withReload(RegEditor)}            />

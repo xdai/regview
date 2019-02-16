@@ -15,7 +15,7 @@ class RegDb {
 		this.export = this.export.bind(this);
 	}
 
-	open() {
+	open = () => {
 		this.setDbBusy(true);
 
 		return openDb('NnRegView', 1, upgradeDb => {
@@ -26,7 +26,7 @@ class RegDb {
 		});
 	}
 
-	count() {
+	count = () => {
 		return this.open().then(db=> {
 			let tx = db.transaction('store', 'readonly');
 			let store = tx.objectStore('store')
@@ -35,7 +35,7 @@ class RegDb {
 		})
 	}
 
-	get(key) {
+	get = (key) => {
 		return this.open().then(db => {
 			let tx = db.transaction('store', 'readonly');
 			let store = tx.objectStore('store');
@@ -46,7 +46,7 @@ class RegDb {
 		});
 	}
 
-	getChildren(key) {
+	getChildren = (key) => {
 		return this.open().then(db => {
 			let tx = db.transaction('store', 'readonly');
 			let store = tx.objectStore('store');
@@ -70,7 +70,7 @@ class RegDb {
 		});
 	}
 
-	put(value) {
+	put = (value) => {
 		return this.open().then(db => {
 			let tx = db.transaction('store', 'readwrite');
 			let store = tx.objectStore('store');
@@ -78,9 +78,17 @@ class RegDb {
 		}).then(() => {
 			this.setDbBusy(false);
 		});
-	}	
+	}
 
-	import(obj) {
+	delete = (key) => {
+		return this.open().then(db => {
+			let tx = db.transaction('store', 'readwrite');
+			let store = tx.objectStore('store');
+			return store.delete(key);
+		});
+	}
+
+	import = (obj) => {
 		return this.open().then(db => {
 			let tx = db.transaction('store', 'readwrite');
 			let store = tx.objectStore('store')
@@ -94,7 +102,7 @@ class RegDb {
 		});
 	}
 
-	export(path) {
+	export = (path) => {
 		let group = [];
 		let register = [];
 
@@ -130,7 +138,7 @@ class RegDb {
 		});
 	}
 
-	saveAs(obj, filename){
+	saveAs = (obj, filename) => {
 	    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
 	    var downloadAnchorNode = document.createElement('a');
 	    downloadAnchorNode.setAttribute("href",     dataStr);
