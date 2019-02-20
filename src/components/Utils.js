@@ -20,11 +20,26 @@ export function isInRange(n, range) {
 	return (range[0] <= n && n <= range[1]) || (range[1] <= n && n <= range[0]);
 }
 
+export function splitKey(key) {
+	if (key === '/') {
+		return [undefined, '/'];
+	}
+
+	return key.match(/^(.*\/)(.+)$/).slice(1, 3);
+}
+
+let recordCache = [];
+export function getRecord(db, path, data) {
+	if (!recordCache[path]) {
+		recordCache[path] = new Record(db, path, data);
+	}
+	return recordCache[path];
+}
+
 export class Record {
-	constructor(db, path, cache) {
+	constructor(db, path) {
 		this.db   = db;
 		this.path = path;
-		this.cache = cache;
 		this.type = path.endsWith('/') ? 'group' : 'register';
 		this.segs = path.split('/');
 
@@ -36,64 +51,43 @@ export class Record {
 		this.ancestorCount = this.segs.length;
 	}
 
-	// Load raw data from IndexedDb. Use cached value if exist.
-	loadRawData = () => {
-		if (this.cache !== undefined) {
-			return Promise.resolve(this.cache);
-		} else {
-			return this.db.get(this.path).then((val) => {
-				this.cache = val || null;
-				return this.cache;
-			});
-		}
+	loadRawData = async () => {
+		return this.db.get(this.path);
 	}
 	
-	// Load data with address info populated. Use cached value if exist.
-	load = () => {
-		if (this.cache && this.cache.address !== undefined) {
-			return Promise.resolve(this.cache);
-		} else {
-			return this.loadRawData().then((data) => {
-				if (data) {
-					return this.getBase().then((base) => {
-						data.address = base + parseInt(data.offset, 16);
-						this.cache = data;
-						return data;
-					})
-				} else {
-					return null;
-				}
-			});
-		}
-	}
+	// Load data with address info populated
+	load = async () => {
+		const data = await this.loadRawData();
+		const address = await this.getAddress();
 
-	loadTree = () => {
-		let translate = (recordTree) => {
-			return recordTree.node.load().then(
-				rootData => Promise.all(
-					recordTree.children.map(child => translate(child))
-				).then(childDataArray => ({
-					node: rootData,
-					children: childDataArray
-				}))
-			)
-		};
-
-		return this.getTree().then((tree) => {
-			return tree ? translate(tree) : null;
+		return ({
+			node: data.node,
+			address: address
 		});
 	}
 
+	loadTree = async () => {
+		let translate = async (recordTree) => {
+			let data = await recordTree.node.load();
+
+			data.children = await Promise.all(
+				recordTree.children.slice(0).map(
+					async child => await translate(child)
+				)
+			);
+
+			data.children.sort((a, b) => a.address - b.address);
+
+			return data;
+		};
+
+		const tree = await this.getTree();
+		return translate(tree);
+	}
+
 	getParent = () => {
-		if (this.path === '/') {
-			return null;
-		} else {
-			let val = '/';
-			for (let i = 0; i < this.segs.length - 1; i++) {
-				val += this.segs[i] + '/';
-			}
-			return new Record(this.db, val);
-		}
+		const [parentKey] = splitKey(this.path);
+		return parentKey ? new Record(this.db, parentKey) : null;
 	}
 
 	getAncestor = (n) => {
@@ -108,31 +102,28 @@ export class Record {
 		}
 	}
 
-	getChildren = () => {
-		return this.db.getChildren(this.path).then((children) => {
-			return children.map(child => new Record(
-				this.db, child.parent + child.name, child
-			));
-		});
+	getChildren = async () => {
+		const data = await this.loadRawData();
+		return data.children.slice(0).map(
+			childName => new Record(this.db, childName)
+		);
 	}
 
-	getTree = () => {
-		let _getTree = (rootRecord) => {
-			return rootRecord.getChildren().then(
-				children => Promise.all(
-					children.map(child => _getTree(child))
-				).then(
-					subTreeArray => ({
-						node: rootRecord,
-						children: subTreeArray
-					})
-				)
+	getTree = async () => {
+		let _getTree = async (rootRecord) => {
+			let children = await rootRecord.getChildren();
+
+			const subTreeArray = await Promise.all(
+				children.map(async child => await _getTree(child))
 			);
+
+			return ({
+				node: rootRecord,
+				children: subTreeArray
+			});
 		};
 
-		return this.load().then((data) => {
-			return (data || this.path === '/') ? _getTree(this) : Promise.resolve(null);
-		});
+		return _getTree(this);
 	}
 
 	update = (data) => {
@@ -143,37 +134,21 @@ export class Record {
 		return this.db.delete()
 	}
 	
-	// Async operation, returns a promise
-	getBase = () => {
+	getBase = async () => {
 		const parent = this.getParent();
-
-		if (parent) {
-			return parent.getAddress();
-		} else {
-			return Promise.resolve(0);
-		}
+		return parent ? parent.getAddress() : 0;
 	}
 	
-	// Async operation, returns a promise
-	getOffset = () => {
-		return this.loadRawData().then((data) => {
-			if (data) {
-				return parseInt(data.offset, 16);
-			} else {
-				return null;
-			}
-		});
+	getOffset = async () => {
+		const data = await this.loadRawData();
+		return data.node ? parseInt(data.node.offset, 16) : 0;
 	}
 
-	// Async operation, returns a promise
-	getAddress = () => {
-		return this.load().then((data) => {
-			if (data) {
-				return data.address;
-			} else {
-				return null;
-			}
-		});
+	getAddress = async () => {
+		const base = await this.getBase();
+		const offset = await this.getOffset();
+
+		return base + offset;
 	}
 }
 
@@ -193,7 +168,7 @@ export function withReload(WrappedComponent) {
 		getCurrentRecord = () => {
 			let segs = this.props.location.pathname.split('/');
 			segs.splice(1,1); // remove the `op` part
-			return new Record(this.context, segs.join('/'));
+			return getRecord(this.context, segs.join('/'));
 		}
 
 		load() {

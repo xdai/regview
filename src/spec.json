@@ -1,6 +1,10 @@
 {
 	"group": [
 		{
+			"name": "/",
+			"offset": "0x00000000"
+		},
+		{
 			"name": "Capability/",
 			"parent": "/",
 			"offset": "0x60000000"

@@ -9,8 +9,8 @@ class GroupTitle extends Component {
 		const path = data.parent + data.name;
 		return (
 			<Link className="reg-group-title" to={'/view' + path}>
-				<span>{data.name}</span>
-				<span>0x{data.address.toString(16).toUpperCase()}</span>
+				<span>{data.name.slice(0, -1)}</span>
+				<span>0x{this.props.address.toString(16).toUpperCase()}</span>
 			</Link>
 		);
 	}
@@ -19,7 +19,8 @@ class GroupTitle extends Component {
 class RegTitle extends Component {
   render() {
     const path = this.props.path;
-    const reg  = this.props.data;
+	const reg  = this.props.data.node;
+	const address = this.props.data.address;
     return (
       <Link className="reg-title" 
             to={{
@@ -29,7 +30,7 @@ class RegTitle extends Component {
       >
         <span>{reg.name}</span>
         <span>{reg.desc_short}</span>
-        <span>0x{reg.address.toString(16).toUpperCase()}</span>
+        <span>0x{address.toString(16).toUpperCase()}</span>
         <span>+{reg.offset}</span>
       </Link>
     );
@@ -40,6 +41,7 @@ class GroupViewer extends Component {
 	render() {
 		if (this.props.data) {
 			const node = this.props.data.node;
+			const address = this.props.data.address;
 			const children = this.props.data.children;
 			let content = [];
 
@@ -51,7 +53,7 @@ class GroupViewer extends Component {
 					);
 				} else {
 					content.push(
-						<RegTitle key={path} path={path} data={child.node}/>
+						<RegTitle key={path} path={path} data={child}/>
 					);
 				}
 			});
@@ -60,7 +62,7 @@ class GroupViewer extends Component {
 				<div className="reg-group">
 					{
 						// Render a title for non-root group
-						node && <GroupTitle data={node} />
+						node && node.parent && <GroupTitle data={node} address={address} />
 					}
 					
 					{

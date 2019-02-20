@@ -1,5 +1,6 @@
 import React from 'react';
 import { openDb } from 'idb';
+import { splitKey } from './components/Utils';
 
 export const RegContext = React.createContext();
 
@@ -10,9 +11,15 @@ class RegDb {
     		return;
 		}
 
+		this.dbPromise = openDb('NnRegView', 1, upgradeDb => {
+			if (!upgradeDb.objectStoreNames.contains('store')) {
+		    	const store = upgradeDb.createObjectStore('store');
+		    	store.createIndex("parent", "parent", {unique: false});
+    		}
+		});
+		
+		this.data = undefined;
 		this.setDbBusy = setDbBusy;
-		this.import = this.import.bind(this);
-		this.export = this.export.bind(this);
 	}
 
 	open = () => {
@@ -35,16 +42,16 @@ class RegDb {
 		})
 	}
 
-	get = (key) => {
-		return this.open().then(db => {
-			let tx = db.transaction('store', 'readonly');
-			let store = tx.objectStore('store');
-			return store.get(key);
-		}).then(val => {
-			this.setDbBusy(false);
-			return val;
-		});
-	}
+	// get = (key) => {
+	// 	return this.open().then(db => {
+	// 		let tx = db.transaction('store', 'readonly');
+	// 		let store = tx.objectStore('store');
+	// 		return store.get(key);
+	// 	}).then(val => {
+	// 		this.setDbBusy(false);
+	// 		return val;
+	// 	});
+	// }
 
 	getChildren = (key) => {
 		return this.open().then(db => {
@@ -70,15 +77,15 @@ class RegDb {
 		});
 	}
 
-	put = (value) => {
-		return this.open().then(db => {
-			let tx = db.transaction('store', 'readwrite');
-			let store = tx.objectStore('store');
-			return store.put(value, value.parent + value.name);
-		}).then(() => {
-			this.setDbBusy(false);
-		});
-	}
+	// put = (value) => {
+	// 	return this.open().then(db => {
+	// 		let tx = db.transaction('store', 'readwrite');
+	// 		let store = tx.objectStore('store');
+	// 		return store.put(value, value.parent + value.name);
+	// 	}).then(() => {
+	// 		this.setDbBusy(false);
+	// 	});
+	// }
 
 	delete = (key) => {
 		return this.open().then(db => {
@@ -88,13 +95,15 @@ class RegDb {
 		});
 	}
 
-	import = (obj) => {
+	import = (str) => {
 		return this.open().then(db => {
 			let tx = db.transaction('store', 'readwrite');
-			let store = tx.objectStore('store')
+			let store = tx.objectStore('store');
 
-			obj.group.forEach(g => store.add(g, g.parent + g.name));
-			obj.register.forEach(r => store.add(r, r.parent + r.name));
+			const json = JSON.parse(str);
+
+			json.group.forEach(g => store.add(g, (g.parent || '') + g.name));
+			json.register.forEach(r => store.add(r, r.parent + r.name));
 
 			return tx.complete.then(()=> {
 				this.setDbBusy(false);
@@ -146,6 +155,102 @@ class RegDb {
 	    document.body.appendChild(downloadAnchorNode); // required for firefox
 	    downloadAnchorNode.click();
 	    downloadAnchorNode.remove();
+	}
+
+	load = async () => {
+		if (this.data) {
+			return this.data;
+		}
+		
+		const db = await this.dbPromise;
+		const tx = db.transaction('store', 'readonly');
+		const store = tx.objectStore('store');
+		const data = await store.getAll();
+		
+		this.data = data.reduce((prev, curr) => {
+			const key = (curr.parent || "") + curr.name;
+			if (prev[key]) {
+				prev[key].node = curr;
+			}
+			else {
+				prev[key] = {
+					node: curr,
+					children: []
+				};
+			}
+			if (curr.parent) {
+				if (prev[curr.parent]) {
+					prev[curr.parent].children.push(key);
+				}
+				else {
+					prev[curr.parent] = {
+						children: [key]
+					};
+				}
+			}
+			return prev;
+		}, []);
+		
+		return this.data;
+	}
+
+	get = async (key) => {
+		const data = await this.load();
+		return data[key];
+	}
+
+	set = async (key, props) => {
+		let entry = await this.get(key);
+
+		for (let name in props) {
+			if (props.hasOwnProperty(name)) {
+				entry.node[name] = props[name];
+			}
+		}
+
+		const newKey = (entry.node.parent || '') + entry.node.name;
+		
+		const db = await this.dbPromise;
+		const tx = db.transaction('store', 'readwrite');
+		const store = tx.objectStore('store');
+		
+		if (key !== newKey) {
+			await store.delete(key);
+		}
+
+		store.put(entry.node, newKey);
+
+		return tx.complete;
+	}
+
+	mv = async (src, dst) => {
+		if (src === dst) {
+			return;
+		}
+
+		const [srcParentKey, srcName] = splitKey(src);
+		const [dstParentKey, dstName] = splitKey(dst);
+
+		// amend the entry itself
+		await this.set(src, {
+			parent: dstParentKey,
+			name: dstName
+		});
+		
+		// detach the entry from original parent
+		let srcParent = await this.get(srcParentKey);
+		srcParent.children.splice(srcParent.children.indexOf(srcName), 1);
+
+		// attach the entry to new parent
+		let dstParent = await this.get(dstParentKey); // FIXME: dstParent doest exist?
+		dstParent.children.push(dstName); // FIXME: duplicated name?
+
+		// re-attach all children to dst
+		let entry = await this.get(src);
+		entry.children.forEach(async childName => {
+			const childKey = src + childName;
+			await this.set(childKey, {parent: dst});
+		});
 	}
 }
 

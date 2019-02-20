@@ -41,13 +41,15 @@ class Regview extends Component {
 					<BusyIndicator enabled={this.state.isDbBusy} />
 					<Route path="/:op/*" component={AddressBar} />
 					<Switch>
-						<Route path="/"                component={DataPicker}     exact />
+						<Route path="/"                component={DataPicker}                 exact />
 						<Route path="/view/"           component={withReload(GroupViewer)}    exact />
 						<Route path="/view/:path(.+/)" component={withReload(GroupViewer)}          />
 						<Route path="/view/:path(.+)"  component={withReload(RegisterViewer)}       />
-						<Route path="/edit/:path(.+/)" component={withReload(GroupEditor)}             />
+						<Route path="/edit/:path(.+/)" component={withReload(GroupEditor)}          />
 						<Route path="/edit/:path(.+)"  component={withReload(RegEditor)}            />
-						<Route                         component={Page404}              />
+						{/* <Route path="/new/register"    component={}                           exact />
+						<Route path="/new/group"       component={}                           exact /> */}
+						<Route                         component={Page404}                          />
 					</Switch>
 				</div>
 			</RegContext.Provider>

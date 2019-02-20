@@ -19,9 +19,9 @@ class DropdownMenu extends Component {
 
 class AddressBar extends Component { // breadcrumb navigation
 	render() {
-		const addr = this.props.match.params[0];
-		const isGroup = addr.endsWith('/') || addr === '';
-		let segs = addr.split('/');
+		const path = this.props.match.params[0];
+		const isGroup = path.endsWith('/') || path === '';
+		let segs = path.split('/');
 		if (isGroup) {
 			segs.pop();
 		}
@@ -41,15 +41,24 @@ class AddressBar extends Component { // breadcrumb navigation
 
 		let actions;
 		if (isGroup) {
+			const newRegLocation = {
+				pathname: '/new/register',
+				state: {parent: '/' + path}
+			};
+			const newGrpLocation = {
+				pathname: '/new/group',
+				state: {parent: '/' + path}
+			};
 			actions = 
 				<Fragment>
-					<Link to={"/edit/" + addr}>Edit</Link>
-					<Link to={"/edit/" + addr}>Edit</Link>
+					{path && <Link to={"/edit/" + path}>Edit this group</Link>}
+					<Link to={newGrpLocation}>Add new group</Link>
+					<Link to={newRegLocation}>Add new register</Link>
 				</Fragment>;
 		} else {
 			actions = 
 				<Fragment>
-					<Link to={"/edit/" + addr}>Edit</Link>
+					<Link to={"/edit/" + path}>Edit this register</Link>
 				</Fragment>;
 		}
 

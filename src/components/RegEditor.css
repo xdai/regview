@@ -12,35 +12,35 @@
 		"field-editor      field-editor      field-editor      field-editor";
 }
 
-[name="name-label"] {
+.reg-editor [name="name-label"] {
 	grid-area: reg-name-label;
 }
 
-[name="name"] {
+.reg-editor [name="name"] {
 	grid-area: reg-name-input;
 }
 
-[name="parent-label"] {
+.reg-editor [name="parent-label"] {
 	grid-area: reg-group-label;
 }
 
-[name="parent"] {
+.reg-editor [name="parent"] {
 	grid-area: reg-group-input;
 }
 
-[name="desc-short-label"] {
+.reg-editor [name="desc-short-label"] {
 	grid-area: reg-summary-label;
 }
 
-[name="desc_short"] {
+.reg-editor [name="desc_short"] {
 	grid-area: reg-summary-input;
 }
 
-[name="desc-long-label"] {
+.reg-editor [name="desc-long-label"] {
 	grid-area: reg-detail-label;
 }
 
-[name="desc_long"] {
+.reg-editor [name="desc_long"] {
 	grid-area: reg-detail-area;
 }
 

@@ -75,11 +75,12 @@ class RegisterViewer extends Component {
 	}
 
 	getDescription = () => {
-		const data = this.props.data;
+		const data = this.props.data.node;
+		const address = this.props.data.address;
 		
 		return (
 			<Fragment>
-				<p>Address: 0x{data.address.toString(16).toUpperCase()}</p>
+				<p>Address: 0x{address.toString(16).toUpperCase()}</p>
 				<p>{data.desc_short}</p>
 				<p>{data.desc_long}</p>
 			</Fragment>
@@ -87,7 +88,7 @@ class RegisterViewer extends Component {
 	}
 
 	getRegMap = () => {
-		const fields = this.props.data.fields;
+		const fields = this.props.data.node.fields;
 
 		let pos = 0;
 		let children = [];
@@ -107,14 +108,14 @@ class RegisterViewer extends Component {
 			pos = fields[i].bits[1] + 1;
 		}
 
-		if (pos < this.props.data.size * 8) {
+		if (pos < this.props.data.node.size * 8) {
 			children.push(
-				<UnusedField key={pos} low={pos} high={this.props.data.size * 8 - 1} width={32} />
+				<UnusedField key={pos} low={pos} high={this.props.data.node.size * 8 - 1} width={32} />
 			);
 		}
 
 		return (
-			<RegContainer width={32} size={this.props.data.size}>
+			<RegContainer width={32} size={this.props.data.node.size}>
 				{children}
 			</RegContainer>
 		);
@@ -122,7 +123,7 @@ class RegisterViewer extends Component {
 
 	getFieldTable = () => {
 		let rows = [];
-		const fields = this.props.data.fields;
+		const fields = this.props.data.node.fields;
 
 		let extraHeader = [];
 		this.state.decodeArray.forEach((n, i) => {
@@ -204,7 +205,7 @@ class RegisterViewer extends Component {
 	}
 	
 	render() {
-		if (this.props.data) {
+		if (this.props.data.node) {
 			return (
 				<Fragment>
 					{this.getDescription()}

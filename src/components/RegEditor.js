@@ -17,15 +17,15 @@ class RegEditor extends Component {
 		const key = '/' + this.props.match.params['path'];
 		let   tmp = key.split('/');
 
-		if (this.props.data) {
+		if (this.props.data.node) {
 			this.state = {
 				name: tmp.pop(),
 				parent: tmp.join('/') + '/',
-				offset: this.props.data.offset,
-				size: this.props.data.size,
-				desc_short: this.props.data.desc_short,
-				desc_long: this.props.data.desc_long,
-				fields: this.props.data.fields,
+				offset: this.props.data.node.offset,
+				size: this.props.data.node.size,
+				desc_short: this.props.data.node.desc_short,
+				desc_long: this.props.data.node.desc_long,
+				fields: this.props.data.node.fields,
 				done: false
 			};
 		} else {
@@ -105,7 +105,7 @@ class RegEditor extends Component {
 
 	commitChange = () => {
 		const db = this.context;
-		db.put({
+		db.set(this.props.path, {
 			name: this.state.name,
 			parent: this.state.parent,
 			offset: this.state.offset,
@@ -117,7 +117,6 @@ class RegEditor extends Component {
 			this.setState({
 				done: true
 			});
-			// console.log("/view" + this.state.parent + this.state.name);
 		});
 	}
 
@@ -130,7 +129,7 @@ class RegEditor extends Component {
 		return (
 			<div className="reg-editor">
 				<label name="name-label">Name:</label>
-				<input name="name" type="text" required onChange={this.onInputChange} value={this.state.name}/>
+				<input name="name" type="text" required onChange={this.onInputChange} value={this.state.name || ""}/>
 				
 				<label name="parent-label">Group:</label>
 				<label name="parent">{this.state.parent}</label>
