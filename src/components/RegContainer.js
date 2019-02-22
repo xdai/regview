@@ -35,11 +35,13 @@ export class Field extends Component {
 		};
 	}
 
-	startUpdating = (e) => {
-		this.setState({
-			renderMode: "updating"
-		});
-		this.props.onStartUpdating(this.props.bits[0]);
+	onClick = (e) => {
+		if (!this.props.readonly) {
+			this.setState({
+				renderMode: "updating"
+			});
+			this.props.onStartUpdating(this.props.bits[0]);
+		}
 	}
 
 	render() {
@@ -61,7 +63,8 @@ export class Field extends Component {
 					col={col}
 					width={width}
 					valid={true}
-					startUpdating={this.startUpdating}
+					onClick={this.onClick}
+					readonly={this.props.readonly}
 				/>
 			);
 			low = pos + 1;
@@ -83,12 +86,14 @@ export class Field extends Component {
  			gridRow: this.props.row,
  			gridColumnStart: this.props.col,
  			gridColumnEnd: this.props.col + this.props.width,
- 		};
+		};
+		const className = this.props.valid ? "field-fragment" : "field-fragment-unused";
+
  		return (
  			<div 
- 				className={this.props.valid ? "field-fragment" : "field-fragment-unused"} 
+ 				className={className} 
  				style={fragStyle}
- 				onClick={this.props.startUpdating}
+ 				onClick={this.props.onClick}
  			>
  				{this.props.name}
  			</div>

@@ -47,8 +47,8 @@ class Regview extends Component {
 						<Route path="/view/:path(.+)"  component={withReload(RegisterViewer)}       />
 						<Route path="/edit/:path(.+/)" component={withReload(GroupEditor)}          />
 						<Route path="/edit/:path(.+)"  component={withReload(RegEditor)}            />
-						{/* <Route path="/new/register"    component={}                           exact />
-						<Route path="/new/group"       component={}                           exact /> */}
+						{/* <Route path="/new/register"    component={}                           exact /> */}
+						{/* <Route path="/new/group"       component={}                           exact /> */}
 						<Route                         component={Page404}                          />
 					</Switch>
 				</div>

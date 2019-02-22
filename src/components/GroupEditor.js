@@ -41,7 +41,7 @@ class GroupEditor extends Component {
 
 	commitChange = () => {
 		const db = this.context;
-		db.put({
+		db.set(this.props.path, {
 			name: this.state.name + '/',
 			parent: this.state.parent,
 			offset: this.state.offset
@@ -49,7 +49,6 @@ class GroupEditor extends Component {
 			this.setState({
 				done: true
 			});
-			// console.log("/view" + this.state.parent + this.state.name);
 		});
 	}
 

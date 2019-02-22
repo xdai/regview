@@ -103,6 +103,7 @@ class RegisterViewer extends Component {
 				<Field key={fields[i].bits[0]} 
 					{...fields[i]} 
 					width={32}
+					readonly
 				/>
 			);
 			pos = fields[i].bits[1] + 1;
