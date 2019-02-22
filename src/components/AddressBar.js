@@ -1,5 +1,7 @@
 import React, { Component, Fragment } from 'react';
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink } from 'react-router-dom';
+
+import { parsePath } from './Utils';
 
 // Font Awesome
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -25,15 +27,16 @@ class DropdownMenu extends Component {
 }
 
 class AddressBar extends Component { // breadcrumb navigation
-	render() {
-		const path = this.props.match.params[0];
-		const isGroup = path.endsWith('/') || path === '';
+	getTitle = (op, path) => {
+		const isGroup = path.endsWith('/');
+		
 		let segs = path.split('/');
+		segs.shift();
 		if (isGroup) {
 			segs.pop();
 		}
 		
-		let links = [<li key="/view/"><NavLink to="/view/"><FontAwesomeIcon icon="home" /></NavLink></li>];
+		let links = [];
 		for (let i = 0; i < segs.length; i++) {
 			let dest = "/view/" + segs.slice(0, i + 1).join("/")
 			if (i + 1 === segs.length && !isGroup) {
@@ -46,37 +49,52 @@ class AddressBar extends Component { // breadcrumb navigation
 			);
 		}
 
+		return (
+			<ul className="nav-breadcrumb">
+				{links}
+			</ul>
+		);
+	}
+
+	getActions = (op, path) => {
+		const isGroup = path.endsWith('/');
+
 		let actions;
 		if (isGroup) {
 			const newRegLocation = {
-				pathname: '/new/register',
-				state: {parent: '/' + path}
+				pathname: '/new/register' + path,
 			};
 			const newGrpLocation = {
-				pathname: '/new/group',
-				state: {parent: '/' + path}
+				pathname: '/new/group' + path,
 			};
 			actions = 
 				<Fragment>
-					{path && <Link to={"/edit/" + path}>Edit this group</Link>}
+					{path && <Link to={"/edit" + path}>Edit this group</Link>}
 					<Link to={newGrpLocation}>Add new group</Link>
 					<Link to={newRegLocation}>Add new register</Link>
 				</Fragment>;
 		} else {
 			actions = 
 				<Fragment>
-					<Link to={"/edit/" + path}>Edit this register</Link>
+					<Link to={"/edit" + path}>Edit this register</Link>
 				</Fragment>;
 		}
 
 		return (
+			<DropdownMenu>
+				{actions}
+			</DropdownMenu>
+		);
+	}
+	
+	render() {
+		const [op, path] = parsePath(this.props.location.pathname);
+		console.log(`${op} ---- ${path}`);
+		return (
 			<div className="nav-container">
-				<ul className="nav-breadcrumb">
-					{links}
-				</ul>
-				<DropdownMenu>
-					{actions}
-				</DropdownMenu>
+				<NavLink className="home-btn" to="/view/"><FontAwesomeIcon icon="home" /></NavLink>
+				{ this.getTitle(op, path) }
+				{ this.getActions(op, path) }
 			</div>
 		);
 	}

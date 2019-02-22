@@ -1,9 +1,10 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import { Redirect } from "react-router-dom";
 
 import { RegContext } from '../RegDb';
 import { RegContainer, Field } from './RegContainer';
-import { getCoordinate, isInRange } from './Utils';
+import { getCoordinate, isInRange, splitKey } from './Utils';
+import { Warning } from './Form';
 
 import './RegEditor.css';
 
@@ -14,30 +15,33 @@ class RegEditor extends Component {
 	constructor(props) {
 		super(props);
 
-		const key = '/' + this.props.match.params['path'];
-		let   tmp = key.split('/');
-
-		if (this.props.data.node) {
+		if (this.props.data && this.props.data.node) {
 			this.state = {
-				name: tmp.pop(),
-				parent: tmp.join('/') + '/',
+				name: this.props.data.node.name,
+				parent: this.props.data.node.parent,
 				offset: this.props.data.node.offset,
 				size: this.props.data.node.size,
 				desc_short: this.props.data.node.desc_short,
 				desc_long: this.props.data.node.desc_long,
 				fields: this.props.data.node.fields,
-				done: false
+				
+				mode: 'edit',
+				done: false,
+				error: undefined
 			};
 		} else {
 			this.state = {
-				name: tmp.pop(),
-				parent: tmp.join('/') + '/',
+				name: '',
+				parent: this.props.path,
 				offset: undefined,
 				size: 4,
 				desc_short: undefined,
 				desc_long: undefined,
 				fields: [],
-				done: false
+				
+				mode: 'new',
+				done: false,
+				error: undefined
 			};
 		}
 	}
@@ -69,7 +73,8 @@ class RegEditor extends Component {
 
 	updateRegister = (property, value) => {
 		this.setState({
-			[property]: value
+			[property]: value,
+			error: undefined
 		});
 	}
 
@@ -105,7 +110,7 @@ class RegEditor extends Component {
 
 	commitChange = () => {
 		const db = this.context;
-		db.set(this.props.path, {
+		const data = {
 			name: this.state.name,
 			parent: this.state.parent,
 			offset: this.state.offset,
@@ -113,9 +118,23 @@ class RegEditor extends Component {
 			desc_short: this.state.desc_short,
 			desc_long: this.state.desc_long,
 			fields: this.state.fields
-		}).then(() => {
+		};
+		
+		let promise;
+		if (this.state.mode === 'edit') { // update
+			promise = db.set(this.props.path, data);
+		} else { // add
+			promise = db.add(data);
+		}
+
+		promise.then(() => {
 			this.setState({
-				done: true
+				done: true,
+				error: undefined
+			});
+		}).catch((error) => {
+			this.setState({
+				error: error.message
 			});
 		});
 	}
@@ -127,41 +146,48 @@ class RegEditor extends Component {
 			);
 		}
 		return (
-			<div className="reg-editor">
-				<label name="name-label">Name:</label>
-				<input name="name" type="text" required onChange={this.onInputChange} value={this.state.name || ""}/>
-				
-				<label name="parent-label">Group:</label>
-				<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/>
+			<Fragment>
+				<div className="reg-editor">
+					<label name="name-label">Name:</label>
+					<input name="name" type="text" required onChange={this.onInputChange} value={this.state.name || ""}/>
+					
+					<label name="parent-label">Group:</label>
+					{ 
+						this.state.mode === 'new' ? 
+						<label>{this.state.parent}</label> :
+						<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/>
+					}
 
-				<label name="offset-label">Offset:</label>
-				<input name="offset" type="text" placeholder="in hex" required onChange={this.onInputChange} value={this.state.offset || ""}/>
-				
-				<label name="size-label">Size:</label>
-				<input name="size" type="number" min={1} max={64} placeholder="in bytes" required onChange={this.onInputChange} value={this.state.size}/>
-				
-				<label name="desc-short-label">Summary:</label>
-				<input name="desc_short" required onChange={this.onInputChange} value={this.state.desc_short || ""}/>
-				
-				<label name="desc-long-label">Detail:</label>
-				<textarea name="desc_long" placeholder="optional" onChange={this.onInputChange} value={this.state.desc_long || ""}/>
-				
-				<FieldEditor
-					size={this.state.size} 
-					width={32}
-					fields={this.state.fields}
-					addField={this.addField}
-					updateField={this.updateField}
-					deleteField={this.deleteField}
-				/>
+					<label name="offset-label">Offset:</label>
+					<input name="offset" type="text" placeholder="in hex" required onChange={this.onInputChange} value={this.state.offset || ""}/>
+					
+					<label name="size-label">Size:</label>
+					<input name="size" type="number" min={1} max={64} placeholder="in bytes" required onChange={this.onInputChange} value={this.state.size}/>
+					
+					<label name="desc-short-label">Summary:</label>
+					<input name="desc_short" required onChange={this.onInputChange} value={this.state.desc_short || ""}/>
+					
+					<label name="desc-long-label">Detail:</label>
+					<textarea name="desc_long" placeholder="optional" onChange={this.onInputChange} value={this.state.desc_long || ""}/>
+					
+					<FieldEditor
+						size={this.state.size} 
+						width={32}
+						fields={this.state.fields}
+						addField={this.addField}
+						updateField={this.updateField}
+						deleteField={this.deleteField}
+					/>
 
-				<button 
-					name="field-add-btn" 
-					onClick={this.commitChange} 
-					disabled={!(this.state.offset && this.state.desc_short)}>
-					Done
-				</button>
-			</div>
+					<button 
+						name="field-add-btn" 
+						onClick={this.commitChange} 
+						disabled={!(this.state.offset && this.state.desc_short)}>
+						Done
+					</button>
+				</div>
+				{this.state.error && <Warning>{this.state.error}</Warning>}
+			</Fragment>
 		);
 	}
 }

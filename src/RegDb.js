@@ -167,7 +167,44 @@ class RegDb {
 
 	get = async (key) => {
 		const data = await this.load();
-		return data[key];
+		if (data.hasOwnProperty(key)) {
+			return data[key];
+		} else {
+			throw Error(`Entry ${key} doesn't exist`);
+		}
+	}
+
+	add = async (data) => {
+		const key = data.parent + data.name;
+
+		// Check if the key is already exist
+		let exist = true;
+		try {
+			await this.get(key);
+		} catch(error) {
+			exist = false;
+		}
+
+		if (exist) {
+			throw Error(`Entry ${key} already exist`);
+		}
+
+		// Update cache: add entry
+		this.data[key] = {
+			node: data,
+			children: []
+		};
+
+		// Update cache: attache to parent
+		this.data[data.parent].children.push(key);
+
+		// Update DB: commit the entry
+		const db = await this.dbPromise;
+		const tx = db.transaction('store', 'readwrite');
+		const store = tx.objectStore('store');
+		store.put(data, key);
+
+		return tx.complete;
 	}
 
 	set = async (key, props) => {

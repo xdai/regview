@@ -39,16 +39,16 @@ class Regview extends Component {
 			<RegContext.Provider value={this.db}>
 				<div className="regview">
 					<BusyIndicator enabled={this.state.isDbBusy} />
-					<Route path="/:op/*" component={AddressBar} />
+					<Route component={AddressBar} />
 					<Switch>
 						<Route path="/"                component={DataPicker}                 exact />
-						<Route path="/view/"           component={withReload(GroupViewer)}    exact />
-						<Route path="/view/:path(.+/)" component={withReload(GroupViewer)}          />
-						<Route path="/view/:path(.+)"  component={withReload(RegisterViewer)}       />
-						<Route path="/edit/:path(.+/)" component={withReload(GroupEditor)}          />
-						<Route path="/edit/:path(.+)"  component={withReload(RegEditor)}            />
-						{/* <Route path="/new/register"    component={}                           exact /> */}
-						{/* <Route path="/new/group"       component={}                           exact /> */}
+						<Route path="/view/"           component={withReload(GroupViewer, 'view')}    exact />
+						<Route path="/view/:path(.+/)" component={withReload(GroupViewer, 'view')}          />
+						<Route path="/view/:path(.+)"  component={withReload(RegisterViewer, 'view')}       />
+						<Route path="/edit/:path(.+/)" component={withReload(GroupEditor, 'edit')}          />
+						<Route path="/edit/:path(.+)"  component={withReload(RegEditor, 'edit')}            />
+						<Route path="/new/group/:path*"       component={withReload(GroupEditor, 'new')}                 />
+						<Route path="/new/register/:path*"    component={withReload(RegEditor, 'new')}    />
 						<Route                         component={Page404}                          />
 					</Switch>
 				</div>

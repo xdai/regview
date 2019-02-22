@@ -2,6 +2,7 @@ import React, { Component, Fragment } from 'react';
 import { Redirect } from "react-router-dom";
 
 import { RegContainer, Field, UnusedField } from './RegContainer';
+import { Warning } from './Form';
 
 import { num2hexstr } from './Utils';
 
@@ -200,7 +201,7 @@ class RegisterViewer extends Component {
 					<button onClick={this.decode}>Decode</button>
 				</p>
 				
-				{ this.state.decodeError && <div className="warning">Invalid Hex number:<ul>{this.state.decodeError}</ul></div>}
+				{ this.state.decodeError && <Warning>Invalid Hex number:<ul>{this.state.decodeError}</ul></Warning>}
 			</Fragment>
 		)
 	}

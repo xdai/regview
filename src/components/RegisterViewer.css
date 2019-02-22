@@ -30,12 +30,6 @@ th {
 	color: #fff;
 }
 
-.warning {
-	border-left: 5px solid #e66465;
-	padding: 10px;
-	background-color: #ffe7e8;
-}
-
 th.focus-header {
 	background-color: orchid;
 }

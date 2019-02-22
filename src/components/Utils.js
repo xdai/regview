@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { RegContext } from '../RegDb';
+import { Warning } from './Form';
 
 export function str2hex(s) {
 	return parseInt(s, 16);
@@ -21,6 +22,10 @@ export function isInRange(n, range) {
 }
 
 export function splitKey(key) {
+	if (!key) {
+		return [undefined, undefined];
+	}
+	
 	if (key === '/') {
 		return [undefined, '/'];
 	}
@@ -28,12 +33,13 @@ export function splitKey(key) {
 	return key.match(/^(.*\/)(.+)$/).slice(1, 3);
 }
 
-let recordCache = [];
-export function getRecord(db, path, data) {
-	if (!recordCache[path]) {
-		recordCache[path] = new Record(db, path, data);
+export function parsePath(path) {
+	const m = path.match(/^(\/new\/group|\/new\/register|\/view|\/edit)(\/.*)*/);
+	if (!m) {
+		throw Error(`Unrecognized path: ${path}`);
 	}
-	return recordCache[path];
+	const [op, key] = m.slice(1,3);
+	return [op, key || '/'];
 }
 
 export class Record {
@@ -41,14 +47,6 @@ export class Record {
 		this.db   = db;
 		this.path = path;
 		this.type = path.endsWith('/') ? 'group' : 'register';
-		this.segs = path.split('/');
-
-		this.segs.shift();
-		if (this.type === 'group') {
-			this.segs.pop(); // remove the tailing empty string
-		}
-
-		this.ancestorCount = this.segs.length;
 	}
 
 	loadRawData = async () => {
@@ -90,18 +88,6 @@ export class Record {
 		return parentKey ? new Record(this.db, parentKey) : null;
 	}
 
-	getAncestor = (n) => {
-		if (n >= this.ancestorCount) {
-			return null;
-		} else {
-			let val = '/';
-			for (let i = 1; i <= n; i++) {
-				val += this.segs[i-1] + '/';
-			}
-			return new Record(this.db, val);
-		}
-	}
-
 	getChildren = async () => {
 		const data = await this.loadRawData();
 		return data.children.slice(0).map(
@@ -125,14 +111,6 @@ export class Record {
 
 		return _getTree(this);
 	}
-
-	update = (data) => {
-		return this.db.put(data);
-	}
-
-	delete = () => {
-		return this.db.delete()
-	}
 	
 	getBase = async () => {
 		const parent = this.getParent();
@@ -152,7 +130,7 @@ export class Record {
 	}
 }
 
-export function withReload(WrappedComponent) {
+export function withReload(WrappedComponent, mode) {
 	return class extends Component {
 		static contextType = RegContext;
 
@@ -161,25 +139,46 @@ export function withReload(WrappedComponent) {
 
 			this.state = {
 				path: undefined,
-				data: undefined
+				data: undefined,
+				error: undefined
 			};
 		}
 
 		getCurrentRecord = () => {
-			let segs = this.props.location.pathname.split('/');
-			segs.splice(1,1); // remove the `op` part
-			return getRecord(this.context, segs.join('/'));
+			console.log(this.props.match);
+			console.log(this.props.match.params['path']);
+			const key = '/' + (this.props.match.params['path'] || '');
+			return new Record(this.context, key);
 		}
 
-		load() {
-			const record = this.getCurrentRecord();
+		load = () => {
+			switch (mode) {
+			case 'view':
+			case 'edit':
+				this.loadContent();
+				break;
+			case 'new':
+				this.validateParent();
+				break;
+			default:
+				break;
+			}
+		}
 
+		loadContent = () => {
+			const key = '/' + (this.props.match.params['path'] || '');
+			const record = new Record(this.context, key);
+			
 			switch (record.type) {
 			case 'group':
 				record.loadTree().then((tree) => {
 					this.setState({
 						path: record.path,
 						data: tree
+					});
+				}).catch((error) => {
+					this.setState({
+						error: error.message
 					});
 				});
 				break;
@@ -190,12 +189,33 @@ export function withReload(WrappedComponent) {
 						path: record.path,
 						data: data
 					});
+				}).catch((error) => {
+					this.setState({
+						error: error.message
+					});
 				});
 				break;
 			
 			default:
 				break;
 			}
+		}
+
+		validateParent = () => {
+			const path = this.props.match.params['path'];
+			const key = path ? '/' + path + '/' : '/';
+			const record = new Record(this.context, key);
+
+			record.load().then((data) => {
+				this.setState({
+					path: record.path,
+					data: null
+				});
+			}).catch((error) => {
+				this.setState({
+					error: error.message
+				});
+			});
 		}
 		
 		componentDidMount() {
@@ -209,11 +229,31 @@ export function withReload(WrappedComponent) {
 		}
 
 		render() {
-			if (this.state.data === undefined) {
+			if (this.state.error) { // error
+				return <Warning>{this.state.error}</Warning>;
+			} else if (this.state.data === undefined) { // loading
 				return null;
-			} else {
+			}  else { // loaded
 				return <WrappedComponent path={this.state.path} data={this.state.data} {...this.props} />;
 			}
+		}
+	};
+}
+
+export function withModeNew(WrappedComponent) {
+	return class extends Component {
+		componentDidMount() {
+			this.load();
+		}
+		
+		componentDidUpdate(prevProps, prevState) {
+			if (this.props.location.pathname !== prevProps.location.pathname) {
+				this.load(); // re-load on route change
+			}
+		}
+
+		render() {
+			return <WrappedComponent path={this.state.path} {...this.props} />;
 		}
 	};
 }
