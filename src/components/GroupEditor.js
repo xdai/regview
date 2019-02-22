@@ -12,7 +12,6 @@ class GroupEditor extends Component {
 	constructor(props) {
 		super(props);
 
-		console.log(this.props);
 		if (this.props.data) {
 			const node = this.props.data.node;
 			this.state = {
@@ -51,7 +50,6 @@ class GroupEditor extends Component {
 			});
 		});
 	}
-
 	
 	render() {
 		if (this.state.done) {
@@ -66,7 +64,9 @@ class GroupEditor extends Component {
 				<input name="name" type="text" required onChange={this.onInputChange} value={this.state.name || ""}/>
 				
 				<label name="parent-label">Parent:</label>
-				<label>{this.state.parent}</label>
+				{/* <label>{this.state.parent}</label> */}
+				<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/>
+
 				
 				<label name="offset-label">Offset:</label>
 				<input name="offset" type="text" required onChange={this.onInputChange} value={this.state.offset || ""}/>

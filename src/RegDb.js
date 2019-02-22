@@ -42,17 +42,6 @@ class RegDb {
 		})
 	}
 
-	// get = (key) => {
-	// 	return this.open().then(db => {
-	// 		let tx = db.transaction('store', 'readonly');
-	// 		let store = tx.objectStore('store');
-	// 		return store.get(key);
-	// 	}).then(val => {
-	// 		this.setDbBusy(false);
-	// 		return val;
-	// 	});
-	// }
-
 	getChildren = (key) => {
 		return this.open().then(db => {
 			let tx = db.transaction('store', 'readonly');
@@ -61,31 +50,12 @@ class RegDb {
 			return index.getAll(key);
 		}).then(val => {
 			this.setDbBusy(false);
-			// let children = {'group': [], 'register': []};
-			// val.forEach(v => {
-			// 	if (v.name.endsWith('/')) {
-			// 		children.group.push(v);
-			// 	} else {
-			// 		children.register.push(v);
-			// 	}
-			// });
-			// return children;
 			val.sort((a, b) => {
 				return (parseInt(a.offset, 16) - parseInt(b.offset, 16));
 			});
 			return val;
 		});
 	}
-
-	// put = (value) => {
-	// 	return this.open().then(db => {
-	// 		let tx = db.transaction('store', 'readwrite');
-	// 		let store = tx.objectStore('store');
-	// 		return store.put(value, value.parent + value.name);
-	// 	}).then(() => {
-	// 		this.setDbBusy(false);
-	// 	});
-	// }
 
 	delete = (key) => {
 		return this.open().then(db => {
@@ -157,6 +127,7 @@ class RegDb {
 	    downloadAnchorNode.remove();
 	}
 
+	// Load and cache DB content, populate array of children's key.
 	load = async () => {
 		if (this.data) {
 			return this.data;
@@ -201,56 +172,59 @@ class RegDb {
 
 	set = async (key, props) => {
 		let entry = await this.get(key);
+		let data = entry.node;
 
 		for (let name in props) {
 			if (props.hasOwnProperty(name)) {
-				entry.node[name] = props[name];
+				data[name] = props[name];
 			}
 		}
 
-		const newKey = (entry.node.parent || '') + entry.node.name;
+		const newKey = (data.parent || '') + data.name;
 		
 		const db = await this.dbPromise;
 		const tx = db.transaction('store', 'readwrite');
 		const store = tx.objectStore('store');
 		
-		if (key !== newKey) {
-			await store.delete(key);
-		}
+		if (key === newKey) {
+			// Update DB: commit the entry
+			await store.put(data, key);
+		} else {
+			const [srcParentKey] = splitKey(key);
+			const [dstParentKey] = splitKey(newKey);
 
-		store.put(entry.node, newKey);
+			// Update DB: delete the old entry
+			await store.delete(key);
+
+			// Update DB: commit the new entry under newkey
+			await store.put(data, newKey);
+
+			// Update cache: delete the old entry
+			this.data.splice(this.data.indexOf(key), 1);
+			
+			// Update cache: insert the new entry under newKey
+			this.data[newKey] = entry;
+
+			// Updata cache: detach the entry from original parent
+			let srcParent = await this.get(srcParentKey);
+			srcParent.children.splice(srcParent.children.indexOf(key), 1);
+
+			// Update cache: attach the entry to new parent
+			let dstParent = await this.get(dstParentKey); // FIXME: dstParent doest exist?
+			dstParent.children.push(newKey); // FIXME: duplicated name?
+
+			// Recursion: re-attach all children to newKey
+			// make a copy, as original array is going to be modified
+			const tmp = entry.children.slice(0);
+			for (let i = 0; i < tmp.length; i++) {
+				const childKey = tmp[i];
+				await this.set(childKey, {
+					parent: newKey
+				});
+			}
+		} 
 
 		return tx.complete;
-	}
-
-	mv = async (src, dst) => {
-		if (src === dst) {
-			return;
-		}
-
-		const [srcParentKey, srcName] = splitKey(src);
-		const [dstParentKey, dstName] = splitKey(dst);
-
-		// amend the entry itself
-		await this.set(src, {
-			parent: dstParentKey,
-			name: dstName
-		});
-		
-		// detach the entry from original parent
-		let srcParent = await this.get(srcParentKey);
-		srcParent.children.splice(srcParent.children.indexOf(srcName), 1);
-
-		// attach the entry to new parent
-		let dstParent = await this.get(dstParentKey); // FIXME: dstParent doest exist?
-		dstParent.children.push(dstName); // FIXME: duplicated name?
-
-		// re-attach all children to dst
-		let entry = await this.get(src);
-		entry.children.forEach(async childName => {
-			const childKey = src + childName;
-			await this.set(childKey, {parent: dst});
-		});
 	}
 }
 

@@ -132,7 +132,7 @@ class RegEditor extends Component {
 				<input name="name" type="text" required onChange={this.onInputChange} value={this.state.name || ""}/>
 				
 				<label name="parent-label">Group:</label>
-				<label name="parent">{this.state.parent}</label>
+				<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/>
 
 				<label name="offset-label">Offset:</label>
 				<input name="offset" type="text" placeholder="in hex" required onChange={this.onInputChange} value={this.state.offset || ""}/>
