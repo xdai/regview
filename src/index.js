@@ -7,11 +7,6 @@ import { HashRouter as Router } from "react-router-dom";
 import Regview from './components/Regview';
 import './index.css';
 
-/* Font Awesome */
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { faAngleRight, faAngleDown, faAngleDoubleDown, faPlus, faMinus, faTimes} from '@fortawesome/free-solid-svg-icons'
-library.add(faAngleRight, faAngleDown, faAngleDoubleDown, faPlus, faMinus, faTimes);
-
 // React Entry
 ReactDOM.render(
 	<Router><Regview /></Router>,

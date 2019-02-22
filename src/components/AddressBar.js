@@ -1,7 +1,14 @@
 import React, { Component, Fragment } from 'react';
 import { Link, NavLink } from "react-router-dom";
 
+// Font Awesome
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faHome } from '@fortawesome/free-solid-svg-icons'
+
 import './AddressBar.css';
+
+library.add(faHome);
 
 //------------------------------------------------------------
 class DropdownMenu extends Component {
@@ -26,7 +33,7 @@ class AddressBar extends Component { // breadcrumb navigation
 			segs.pop();
 		}
 		
-		let links = [<li key="/view/"><NavLink to="/view/">Root</NavLink></li>];
+		let links = [<li key="/view/"><NavLink to="/view/"><FontAwesomeIcon icon="home" /></NavLink></li>];
 		for (let i = 0; i < segs.length; i++) {
 			let dest = "/view/" + segs.slice(0, i + 1).join("/")
 			if (i + 1 === segs.length && !isGroup) {
