@@ -3,7 +3,7 @@ import { Redirect } from "react-router-dom";
 
 import { RegContext } from '../RegDb';
 import { RegContainer, Field } from './RegContainer';
-import { getCoordinate, isInRange, splitKey } from './Utils';
+import { getCoordinate, isInRange } from './Utils';
 import { Warning } from './Form';
 
 import './RegEditor.css';

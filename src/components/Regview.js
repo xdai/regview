@@ -10,7 +10,7 @@ import GroupViewer from './GroupViewer';
 import RegisterViewer from './RegisterViewer';
 import GroupEditor from './GroupEditor';
 import RegEditor from './RegEditor';
-import AddressBar from './AddressBar';
+import NavBar from './NavBar';
 import { withReload } from './Utils';
 
 import './Regview.css'
@@ -39,7 +39,7 @@ class Regview extends Component {
 			<RegContext.Provider value={this.db}>
 				<div className="regview">
 					<BusyIndicator enabled={this.state.isDbBusy} />
-					<Route component={AddressBar} />
+					<Route path="/:op/*" component={NavBar} />
 					<Switch>
 						<Route path="/"                component={DataPicker}                 exact />
 						<Route path="/view/"           component={withReload(GroupViewer, 'view')}    exact />

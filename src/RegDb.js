@@ -72,8 +72,8 @@ class RegDb {
 
 			const json = JSON.parse(str);
 
-			json.group.forEach(g => store.add(g, (g.parent || '') + g.name));
-			json.register.forEach(r => store.add(r, r.parent + r.name));
+			json.forEach(g => store.add(g, (g.parent || '') + g.name));
+			//json.register.forEach(r => store.add(r, r.parent + r.name));
 
 			return tx.complete.then(()=> {
 				this.setDbBusy(false);
@@ -81,50 +81,26 @@ class RegDb {
 		});
 	}
 
-	export = (path) => {
-		let group = [];
-		let register = [];
+	// Export the hierarchy:
+	//   - all ancestors
+	//   - key itself
+	//   - all children
+	export = async (key) => {
+		const data = await this.load();
 
-		this.open().then(db => {
-			let tx = db.transaction('store', 'readonly');
-			let store = tx.objectStore('store');
-			return store.openCursor();
-		}).then(function checkItems(cursor) {
-			if (!cursor) {
-				return;
-			}
-			if (cursor.key.startsWith(path)) {
-				if (cursor.key.endsWith('/')) {
-					group.push(cursor.value);
-				} else {
-					register.push(cursor.value);
-				}
-			} else if (path.startsWith(cursor.key)) {
-				group.push(cursor.value);
-			} else {
-				// ignore
-			}
-			return cursor.continue().then(checkItems);
-		}).then(() => {
-			// let filename = path.split('/');
-			// if (path.endsWith('/')) {
-			// 	filename = filename[filename.length - 2] + '.json';
-			// } else {
-			// 	filename = filename[filename.length - 1] + '.json';
-			// }
-			// self.saveAs({'group': group, 'register': register}, filename);
-			return {'group': group, 'register': register};
-		});
-	}
+		let shouldInclude = (keyA, keyB) => keyA.startsWith(keyB) || keyB.startsWith(keyA);
 
-	saveAs = (obj, filename) => {
-	    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj));
-	    var downloadAnchorNode = document.createElement('a');
-	    downloadAnchorNode.setAttribute("href",     dataStr);
-	    downloadAnchorNode.setAttribute("download", filename);
-	    document.body.appendChild(downloadAnchorNode); // required for firefox
-	    downloadAnchorNode.click();
-	    downloadAnchorNode.remove();
+		let result = [];
+		for (let elmKey in data) {
+			if (shouldInclude(elmKey, key)) {
+				result[elmKey] = {
+					node: data[elmKey].node,
+					children: data[elmKey].children.filter((child) => shouldInclude(child, key))
+				};
+			}
+		}
+
+		return result;
 	}
 
 	// Load and cache DB content, populate array of children's key.
