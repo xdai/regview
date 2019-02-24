@@ -16,7 +16,7 @@ class RegisterViewer extends Component {
 		this.state = {
 			decodeString: undefined,
 			decodeArray: [],
-			decodeError: undefined,
+			decodeError: [],
 			focus: [0, 1]
 		};
 	}
@@ -31,9 +31,12 @@ class RegisterViewer extends Component {
 		});
 	}
 
-	decode = () => {
+	decode = (e) => {
+		const target = e.target;
+		const value = target.value;
+
 		const re = /^(0x)?[0-9a-f]+$/i
-		let segs = this.state.decodeString.split(',').map(s => s.trim()).filter(s => s !== '');
+		let segs = value.split(',').map(s => s.trim()).filter(s => s !== '');
 
 		let error = [];
 
@@ -45,17 +48,12 @@ class RegisterViewer extends Component {
 			}
 		}
 
-		if (error.length) {
 			this.setState({
+				decodeString: value,
+				decodeArray: segs.filter(s => re.test(s)).map(s => parseInt(s, 16)),
 				decodeError: error
 			})
-		} else {
-			this.setState({
-				decodeArray: segs.map(n => parseInt(n, 16)),
-				decodeError: undefined
-			})
-		}
-		console.log(segs);
+
 	}
 
 	parseField = (val, [low, high]) => {
@@ -195,26 +193,23 @@ class RegisterViewer extends Component {
 
 	getDecodeForm = () => {
 		return (
-			<Fragment>
-				<p>
-					<input name="decodeString" type="text" onChange={this.onInputChange} value={this.state.decodeString || ""} />
-					<button onClick={this.decode}>Decode</button>
-				</p>
-				
-				{ this.state.decodeError && <Warning>Invalid Hex number:<ul>{this.state.decodeError}</ul></Warning>}
-			</Fragment>
+			<form className="reg-decode">
+				<p>Decode comma seperated hex number:</p>
+				<textarea name="decodeString" onChange={this.decode} value={this.state.decodeString || ""} />
+				{ this.state.decodeError.length > 0 && <Warning>Invalid hex number:<ul>{this.state.decodeError}</ul></Warning>}
+			</form>
 		)
 	}
 	
 	render() {
 		if (this.props.data.node) {
 			return (
-				<Fragment>
+				<div className="reg-content">
 					{this.getDescription()}
 					{this.getRegMap()}
 					{this.getFieldTable()}
 					{this.getDecodeForm()}
-				</Fragment>
+				</div>
 			);
 		} else {
 			return (
