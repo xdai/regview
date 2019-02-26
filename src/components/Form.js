@@ -86,8 +86,9 @@ export class Deleter extends Component {
 	
 	render() {
 		const [parentKey] = splitKey(this.props.path);
+
 		return this.state.deleted ? (
-			<Redirect to={'/view' + (parentKey || '/')} />
+			<Redirect to={parentKey ? '/view' + parentKey : '/'} />
 		) : (
 			<span onClick={this.deleteHierarchy}>
 				 {this.props.children}

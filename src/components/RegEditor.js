@@ -13,15 +13,16 @@ class RegEditor extends Component {
 	constructor(props) {
 		super(props);
 
-		if (this.props.data && this.props.data.node) {
+		if (this.props.op === '/edit') {
+			const node = this.props.data.node;
 			this.state = {
-				name: this.props.data.node.name,
-				parent: this.props.data.node.parent,
-				offset: this.props.data.node.offset,
-				size: this.props.data.node.size,
-				desc_short: this.props.data.node.desc_short,
-				desc_long: this.props.data.node.desc_long,
-				fields: this.props.data.node.fields,
+				name: node.name,
+				parent: node.parent,
+				offset: node.offset,
+				size: node.size,
+				desc_short: node.desc_short,
+				desc_long: node.desc_long,
+				fields: node.fields,
 				
 				done: false,
 				error: undefined
@@ -30,10 +31,10 @@ class RegEditor extends Component {
 			this.state = {
 				name: '',
 				parent: this.props.path,
-				offset: undefined,
+				offset: 0,
 				size: 4,
-				desc_short: undefined,
-				desc_long: undefined,
+				desc_short: '',
+				desc_long: '',
 				fields: [],
 				
 				done: false,

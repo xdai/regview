@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
+import { Redirect } from "react-router-dom";
+
 import { regDb } from '../RegDb';
-import { Warning } from './Form';
+import { Warning, PathLabel } from './Form';
 
 export function str2hex(s) {
 	return parseInt(s, 16);
@@ -42,7 +44,7 @@ export function parsePath(path) {
 	return [op, key || '/'];
 }
 
-export function withReload(WrappedComponent, mode) {
+export function withReload(WrappedComponent) {
 	return class extends Component {
 		constructor(props) {
 			super(props);
@@ -58,21 +60,33 @@ export function withReload(WrappedComponent, mode) {
 		load = async () => {
 			const [op, path] = parsePath(this.props.location.pathname);
 
-			this.loadContent(op, path).then(data => {
+			try {
+				const data = await this.loadContent(op, path);
 				this.setState({
 					op: op,
 					path: path,
 					data: data,
 					error: undefined
 				});
-			}).catch(error => {
-				this.setState({
-					op: op,
-					path: path,
-					data: undefined,
-					error: error
-				});
-			});
+			} catch(error) {
+				const n = await regDb.count();
+
+				if (n === 0) {
+					this.setState({
+						op: op,
+						path: path,
+						data: undefined,
+						error: 'db-empty'
+					});
+				} else {
+					this.setState({
+						op: op,
+						path: path,
+						data: undefined,
+						error: 'load-failure'
+					});
+				}
+			}
 		}
 
 		loadContent = async (op, path) => {
@@ -104,7 +118,15 @@ export function withReload(WrappedComponent, mode) {
 
 		render() {
 			if (this.state.error) { // error
-				return <Warning>{this.state.error.message}</Warning>;
+				if (this.state.error === 'db-empty') {
+					return <Redirect to="/import" />;
+				} else {
+					return (
+						<Warning>
+							Entry <PathLabel>{this.state.path}</PathLabel> doesn't exist
+						</Warning>
+					)
+				}
 			} else if (this.state.data === undefined) { // loading
 				return null;
 			}  else { // loaded

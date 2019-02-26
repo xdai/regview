@@ -1,7 +1,7 @@
 /*
  * Picker button container
  */
-div#data-source {
+.data-source {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -18,7 +18,7 @@ div#data-source {
 /*
  * Data picker buttons
  */
-div#data-source .data-picker {
+.data-source .data-picker {
   font-size: 1.25em;
   font-weight: 700;
   color: white;
@@ -35,17 +35,10 @@ div#data-source .data-picker {
   cursor: pointer;
 }
 
-div#data-source .data-picker:hover {
+.data-source .data-picker:hover {
 	background-color: #ff4e50;
 }
 
-div#data-source .data-picker input {
+.data-source .data-picker input {
 	display: none;
-}
-
-.center-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
 }

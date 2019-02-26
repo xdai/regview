@@ -215,6 +215,10 @@ class RegDb {
 
 	// Updata props of an entry, handle cache coherency and data integrity
 	set = async (key, props, transaction) => {
+		if (key === '/') {
+			throw Error(`Root entry is readonly`);
+		}
+		
 		let tx = transaction;
 		if (!tx) {
 			const db = await this.dbPromise;
@@ -230,13 +234,18 @@ class RegDb {
 		const newKey = (newParent || '') + newName;
 
 		// New parent must exist
-		if (newParent && !dbCache.hasOwnProperty(newParent)) {
-			throw Error(`Entry ${newParent} doesn't exist`);
-		}
+		const newParentEntry = await this.get(newParent, tx);
+		const parentEntry = await this.get(entry.node.parent, tx);
 
 		// Cannot override an existing entry
 		if (newKey !== key && dbCache.hasOwnProperty(newKey)) {
 			throw Error(`Entry ${newKey} already exist`);
+		}
+
+		// Calculate address offset we should apply later
+		let offset = newParentEntry.address - parentEntry.address;
+		if (props.offset) {
+			offset += parseInt(props.offset, 16) - parseInt(entry.node.offset, 16);
 		}
 
 		// Update the entry, ignore the key change
@@ -253,65 +262,50 @@ class RegDb {
 			return store.put(node, key);
 		}
 
-		// Apply the key change only
-		const move = async (entry, dstKey) => {
+		// Apply the key change only. This is EXTREMELY tricky.
+		const move = async(entry, dstKey) => {
 			const srcKey = entry.node.parent + entry.node.name;
 			const [dstParentKey, dstName] = splitKey(dstKey);
-			
-			const srcParent = await this.get(entry.node.parent, tx);
-			const dstParent = await this.get(dstParentKey, tx);
 
-			entry.node.parent = dstParentKey;
-			entry.node.name   = dstName;
-
-			// Update DB: delete the old entry
-			await store.delete(srcKey);
-
-			// Update DB: commit the new entry under new key
-			await store.put(entry.node, dstKey);
-
-			// Update cache: delete the old entry
-			dbCache.splice(dbCache.indexOf(srcKey), 1);
-
-			// Update cache: insert the entry under new key
-			dbCache[dstKey] = entry;
-
-			// Updata cached hierarchy: detach the entry from original parent
-			srcParent.children.splice(srcParent.children.indexOf(srcKey), 1);
-
-			// Update cached hierarchy: attach the entry to new parent
-			dstParent.children.push(dstKey);
-
-			// Recursion: re-attach all children to newKey
-			// make a copy, as original array is going to be modified
-			console.log(entry);
-			const tmp = entry.children.slice(0);
-			for (let i = 0; i < tmp.length; i++) {
-				const childKey = tmp[i];
-				const childEntry = await this.get(childKey, tx);
+			// Recursion: move all children
+			for (let i = 0; i < entry.children.length; i++) {
+				const childKey = entry.children[i];
+				const childEntry = dbCache[childKey];
 				const newKey = dstKey + childEntry.node.name;
 				await move(childEntry, newKey);
 			}
-		}
+
+			// Fix the cache
+			delete dbCache[srcKey];
+			entry.node.parent = dstParentKey;
+			entry.node.name   = dstName;
+			entry.children    = entry.children.map(
+				childKey =>	dstKey + childKey.slice(srcKey.length)
+			);
+			dbCache[dstKey] = entry;
+
+			// Update the DB
+			await store.delete(srcKey);
+			await store.put(entry.node, dstKey);
+		}		
 
 		await update(entry, props);
 
 		if (key !== newKey) {
 			await move(entry, newKey);
+			parentEntry.children.splice(parentEntry.children.indexOf(key), 1);
+			newParentEntry.children.push(newKey);
 		}
 
 		// Apply address offset introduced by the change
 		const applyOffset = (root, offset) => {
-			if (!offset) {
-				return;
-			}
 			root.address += offset;
 			root.children.forEach(childKey => {
-				applyOffset(dbCache[childKey]);
+				applyOffset(dbCache[childKey], offset);
 			});
 		};
-		if (props.offset) {
-			applyOffset(entry, parseInt(props.offset, 16) - parseInt(entry.node.offset, 16));
+		if (offset) {
+			applyOffset(entry, offset);
 		}
 
 		return tx.complete;
@@ -327,7 +321,6 @@ class RegDb {
 		const store = tx.objectStore('store');
 
 		const entry = await this.get(key, tx);
-		const parent = await this.get(entry.node.parent, tx);
 
 		let _delete = async (root) => {
 			for (let i = 0; i < root.children.length; i++) {
@@ -335,15 +328,48 @@ class RegDb {
 				await _delete(child);
 			}
 
-			await store.delete(key);
-			dbCache.splice(dbCache.indexOf(key), 1);
+			const rootKey = (root.node.parent || '') + root.node.name;
+			await store.delete(rootKey);
+			delete dbCache[rootKey];
 		}
 		
 		await _delete(entry);
-
-		parent.children.splice(parent.children.indexOf(key), 1);
+		
+		if (entry.node.parent) {
+			const parent = await this.get(entry.node.parent, tx);
+			parent.children.splice(parent.children.indexOf(key), 1);
+		}
 		
 		return tx.complete;
+	}
+
+	// Delete everything except the root (i.e. '/').
+	reset = async (transaction) => {
+		let tx = transaction;
+		if (!tx) {
+			const db = await this.dbPromise;
+			tx = db.transaction('store', 'readwrite');
+		}
+		const store = tx.objectStore('store');
+
+		try {
+			await this.delete('/', tx);
+		} catch(error) {
+			// ignore - DB could be empty
+		}
+
+		const entry = {
+			name: '/',
+			offset: '0x00000000'
+		};
+		await store.put(entry, '/');
+
+		dbCache = [];
+		dbCache['/'] = {
+			node: entry,
+			address: 0,
+			children: []
+		};
 	}
 
 	parse = (rawData) => {

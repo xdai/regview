@@ -19,14 +19,13 @@ class GroupEditor extends Component {
 	constructor(props) {
 		super(props);
 
-		if (this.props.data) {
+		if (this.props.op === '/edit') {
 			const node = this.props.data.node;
 			this.state = {
 				name: node.name.slice(0, -1),
 				parent: node.parent,
 				offset: node.offset,
 				
-				mode: 'edit',
 				error: undefined
 			};
 		} else {
@@ -35,7 +34,6 @@ class GroupEditor extends Component {
 				parent: this.props.path,
 				offset: 0,
 
-				mode: 'new',
 				error: undefined
 			};
 		}
@@ -60,7 +58,7 @@ class GroupEditor extends Component {
 		};
 
 		let promise;
-		if (this.state.mode === 'edit') { // update
+		if (this.props.op === '/edit') { // update
 			promise = regDb.set(this.props.path, data);
 		} else { // add
 			promise = regDb.add(data);

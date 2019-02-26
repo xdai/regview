@@ -4,3 +4,10 @@
 	padding: 10px;
 	background-color: #ffe7e8;
 }
+
+.path-label {
+	padding: 2px 5px;
+	color: #fff;
+	background-color: #495057;
+	border-radius: 3px;
+}
