@@ -149,9 +149,9 @@ class RegEditor extends Component {
 					
 					<label name="parent-label">Group:</label>
 					{ 
-						this.state.mode === 'new' ? 
-						<label>{this.state.parent}</label> :
-						<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/>
+						this.state.mode === '/edit' ? 
+						<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/> :
+						<label>{this.state.parent}</label>
 					}
 
 					<label name="offset-label">Offset:</label>

@@ -95,9 +95,9 @@ class GroupEditor extends Component {
 					
 					<label name="parent-label">Parent:</label>
 					{ 
-						this.state.mode === 'new' ? 
-						<label>{this.state.parent}</label> :
-						<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/>
+						this.props.op === '/edit' ? 
+						<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/> :
+						<label>{this.state.parent}</label>
 					}
 
 					
