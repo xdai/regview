@@ -1,8 +1,8 @@
 import React, { Component, Fragment } from 'react';
 import { Redirect } from "react-router-dom";
 
-import { RegContext } from '../RegDb';
-import { Warning } from './Form';
+import { regDb } from '../RegDb';
+import { Warning, NameInput } from './Form';
 
 import './GroupEditor.css';
 
@@ -16,8 +16,6 @@ import './GroupEditor.css';
  *      - 
  */
 class GroupEditor extends Component {
-	static contextType = RegContext;
-
 	constructor(props) {
 		super(props);
 
@@ -55,7 +53,6 @@ class GroupEditor extends Component {
 	}
 
 	commitChange = () => {
-		const db = this.context;
 		const data = {
 			name: this.state.name + '/',
 			parent: this.state.parent,
@@ -63,10 +60,10 @@ class GroupEditor extends Component {
 		};
 
 		let promise;
-		if (this.props.path) { // update
-			promise = db.set(this.props.path, data);
+		if (this.state.mode === 'edit') { // update
+			promise = regDb.set(this.props.path, data);
 		} else { // add
-			promise = db.add(data);
+			promise = regDb.add(data);
 		}
 
 		promise.then(() => {
@@ -81,10 +78,6 @@ class GroupEditor extends Component {
 	}
 	
 	render() {
-		console.log(this.props);
-
-		console.log(this.props.location.pathname.slice(this.props.match.path.length) || '/');
-
 		if (this.state.done) {
 			return (
 				<Redirect to={"/view" + this.state.parent + this.state.name + "/"}/>
@@ -100,7 +93,7 @@ class GroupEditor extends Component {
 			<Fragment>
 				<div className="group-editor">
 					<label name="name-label">Name:</label>
-					<input name="name" type="text" required onChange={this.onInputChange} value={this.state.name || ""}/>
+					<NameInput name="name" required onChange={this.onInputChange} value={this.state.name || ""}/>
 					
 					<label name="parent-label">Parent:</label>
 					{ 

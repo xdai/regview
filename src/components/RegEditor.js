@@ -1,7 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import { Redirect } from "react-router-dom";
 
-import { RegContext } from '../RegDb';
+import { regDb } from '../RegDb';
 import { RegContainer, Field } from './RegContainer';
 import { getCoordinate, isInRange } from './Utils';
 import { Warning } from './Form';
@@ -10,8 +10,6 @@ import './RegEditor.css';
 
 //------------------------------------------------------------
 class RegEditor extends Component {
-	static contextType = RegContext;
-
 	constructor(props) {
 		super(props);
 
@@ -25,7 +23,6 @@ class RegEditor extends Component {
 				desc_long: this.props.data.node.desc_long,
 				fields: this.props.data.node.fields,
 				
-				mode: 'edit',
 				done: false,
 				error: undefined
 			};
@@ -39,7 +36,6 @@ class RegEditor extends Component {
 				desc_long: undefined,
 				fields: [],
 				
-				mode: 'new',
 				done: false,
 				error: undefined
 			};
@@ -109,7 +105,6 @@ class RegEditor extends Component {
 	}
 
 	commitChange = () => {
-		const db = this.context;
 		const data = {
 			name: this.state.name,
 			parent: this.state.parent,
@@ -121,10 +116,10 @@ class RegEditor extends Component {
 		};
 		
 		let promise;
-		if (this.state.mode === 'edit') { // update
-			promise = db.set(this.props.path, data);
+		if (this.props.op === '/edit') { // update
+			promise = regDb.set(this.props.path, data);
 		} else { // add
-			promise = db.add(data);
+			promise = regDb.add(data);
 		}
 
 		promise.then(() => {

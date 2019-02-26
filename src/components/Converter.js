@@ -4,13 +4,13 @@ let forEachNode = (data, rootKey, func) => {
     root.children.forEach(childKey => forEachNode(data, childKey, func));
 }
 
-let forEachGroup = (data, rootKey, func) => {
-    forEachNode(data, rootKey, (node) => {
-        if (node.name.endsWith('/')) {
-            func(node);
-        }
-    });
-}
+// let forEachGroup = (data, rootKey, func) => {
+//     forEachNode(data, rootKey, (node) => {
+//         if (node.name.endsWith('/')) {
+//             func(node);
+//         }
+//     });
+// }
 
 let forEachRegister = (data, rootKey, func) => {
     forEachNode(data, rootKey, (node) => {
@@ -25,7 +25,7 @@ let convertToJson = (data) => {
     for (let key in data) {
         obj.push(data[key].node);
     }
-    
+
     return JSON.stringify(obj, null, 2);
 }
 
@@ -51,10 +51,22 @@ let convertToTemplate = (data) => {
 
 export let convertTo = (data, format) => {
     const converter = {
-        'json': [convertToJson, 'register.json'],
-        'macro': [convertToMacro, 'register-macro.h'],
-        'template': [convertToTemplate, 'register-template.h']
+        json: {
+            handle: convertToJson,
+            descripton: 'JSON'
+        } ,
+        macro: {
+            handle: convertToMacro,
+            descripton: 'C/C++ Macro'
+        },
+        template: {
+            handle: convertToTemplate,
+            descripton: 'C++ Template'
+        }
     }[format];
 
-    return [converter[0](data), converter[1]];
+    return ({
+        data: converter.handle(data),
+        descripton: converter.descripton
+    });
 }

@@ -19,8 +19,8 @@ class GroupTitle extends Component {
 class RegTitle extends Component {
   render() {
     const path = this.props.path;
-	const reg  = this.props.data.node;
-	const address = this.props.data.address;
+	const reg  = this.props.data[path].node;
+	const address = this.props.data[path].address;
     return (
 		<Link className="reg-title" 
 			to={{
@@ -40,20 +40,20 @@ class RegTitle extends Component {
 class Group extends Component {
 	render() {
 		if (this.props.data) {
-			const node = this.props.data.node;
-			const address = this.props.data.address;
-			const children = this.props.data.children;
+			const root = this.props.data[this.props.path];
+			const node = root.node;
+			const address = root.address;
+			const children = root.children;
 			let content = [];
 
-			children.forEach((child) => {
-				const path = child.node.parent + child.node.name;
-				if (path.endsWith('/')) {
+			children.forEach((childKey) => {
+				if (childKey.endsWith('/')) {
 					content.push(
-						<li key={path}><Group path={path} data={child}/></li>
+						<li key={childKey}><Group path={childKey} data={this.props.data}/></li>
 					);
 				} else {
 					content.push(
-						<li key={path}><RegTitle path={path} data={child}/></li>
+						<li key={childKey}><RegTitle path={childKey} data={this.props.data}/></li>
 					);
 				}
 			});

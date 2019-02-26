@@ -1,9 +1,8 @@
 import React, { Component, Fragment } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
-import { RegContext } from '../RegDb';
 import { parsePath } from './Utils';
-import { convertTo } from './Converter';
+import { Exporter, Deleter } from './Form';
 
 // Font Awesome
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -28,10 +27,9 @@ class DropdownMenu extends Component {
 	}
 }
 
-class NavBar extends Component { // breadcrumb navigation
-	static contextType = RegContext;
-
-	getTitle = (op, path) => {
+class NavBar extends Component {
+	// breadcrumb navigation
+	getBreadcrumb = (op, path) => {
 		const isGroup = path.endsWith('/');
 		
 		let segs = path.split('/');
@@ -60,6 +58,7 @@ class NavBar extends Component { // breadcrumb navigation
 		);
 	}
 
+	// dropdown action menu
 	getActions = (op, path) => {
 		const isGroup = path.endsWith('/');
 
@@ -74,17 +73,19 @@ class NavBar extends Component { // breadcrumb navigation
 					{path !== '/' && <Link to={"/edit" + path}>Edit this group</Link>}
 					<Link to={'/new/group' + path}>Add new group</Link>
 					<Link to={'/new/register' + path}>Add new register</Link>
-					<span onClick={this.exportAsJson}>Export as JSON...</span>
-					<span onClick={this.exportAsMacro}>Export as C/C++ Macro...</span>
-					<span onClick={this.exportAsTemplate}>Export as C++ Template...</span>
+					<Deleter path={path}>Delete (recursively)</Deleter>
+					<Exporter path={path} format="json">Export as JSON...</Exporter>
+					<Exporter path={path} format="macro">Export as Macro...</Exporter>
+					<Exporter path={path} format="template">Export as Bitpack...</Exporter>
 				</Fragment>;
 		} else {
 			actions = 
 				<Fragment>
 					<Link to={"/edit" + path}>Edit this register</Link>
-					<span onClick={this.exportAsJson}>Export as JSON...</span>
-					<span onClick={this.exportAsMacro}>Export as C/C++ Macro...</span>
-					<span onClick={this.exportAsTemplate}>Export as C++ Template...</span>
+					<Deleter path={path}>Delete (recursively)</Deleter>
+					<Exporter path={path} format="json">Export as JSON...</Exporter>
+					<Exporter path={path} format="macro">Export as Macro...</Exporter>
+					<Exporter path={path} format="template">Export as Bitpack...</Exporter>
 				</Fragment>;
 		}
 
@@ -94,34 +95,13 @@ class NavBar extends Component { // breadcrumb navigation
 			</DropdownMenu>
 		);
 	}
-
-	saveAs = (content, filename) => {
-	    var dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(content);
-	    var downloadAnchorNode = document.createElement('a');
-	    downloadAnchorNode.setAttribute("href",     dataStr);
-		downloadAnchorNode.setAttribute("download", filename);
-	    document.body.appendChild(downloadAnchorNode); // required for firefox
-	    downloadAnchorNode.click();
-		downloadAnchorNode.remove();
-	}
-
-	exportAs = (format) => {
-		const path = parsePath(this.props.location.pathname)[1];
-		const db = this.context;
-
-		db.export(path).then((data) => this.saveAs(...convertTo(data, format)));
-	}
-
-	exportAsJson = () => this.exportAs('json');
-	exportAsMacro = () => this.exportAs('macro');
-	exportAsTemplate = () => this.exportAs('template');
 	
 	render = () => {
 		const [op, path] = parsePath(this.props.location.pathname);
 		return (
 			<div className="nav-container">
 				<NavLink className="home-btn" to="/view/"><FontAwesomeIcon icon="home" /></NavLink>
-				{ this.getTitle(op, path) }
+				{ this.getBreadcrumb(op, path) }
 				{ this.getActions(op, path) }
 			</div>
 		);

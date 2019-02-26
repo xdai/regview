@@ -1,18 +1,15 @@
 import React, { Component } from 'react';
 import { Redirect, Link } from "react-router-dom";
 
-import { RegContext } from '../RegDb';
+import { regDb } from '../RegDb';
 
 import './DataPicker.css'
 
 //------------------------------------------------------------
 class DataPicker extends Component {
-	static contextType = RegContext;
-
 	constructor(props) {
 		super(props);
 
-		this.importData = this.importData.bind(this);
 		this.fileRef = React.createRef();
 
 		this.state = {
@@ -22,7 +19,6 @@ class DataPicker extends Component {
 	}
 
 	render() {
-		const db = this.context;
 		return this.state.isDecided ? (
 			<div id="data-source">
 				{
@@ -32,7 +28,7 @@ class DataPicker extends Component {
 					 */
 					this.state.count > 0 && <Redirect to="/view/" />
 				}
-				<Link to="/new/group" className="data-picker" onClick={() => db.export('/Capability')}>
+				<Link to="/new/group" className="data-picker">
 					Start Fresh
 				</Link>
 
@@ -45,8 +41,7 @@ class DataPicker extends Component {
 	}
 
 	componentDidMount() {
-		const db = this.context;
-		db.count().then(n => {
+		regDb.count().then(n => {
 			this.setState({
 				isDecided: true,
 				count: n
@@ -54,16 +49,15 @@ class DataPicker extends Component {
 		});
 	}
 
-	importData(e) {
+	importData = (e) => {
 		const file = this.fileRef.current.files[0];
-		const db = this.context;
 
 		if (file.type.match(/application\/json/)) {
 			let reader = new FileReader();
 			let history = this.props.history;
 
 			reader.onload = (e) => {
-    			db.import(reader.result).then(() => {
+    			regDb.import(reader.result).then(() => {
     				history.push('/view/');
     			});
     		};
