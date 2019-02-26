@@ -46,9 +46,16 @@ class NavBar extends Component {
 			} else {
 				dest += "/";
 			}
-			links.push(
-				<li key={dest}><NavLink to={dest}>{segs[i]}</NavLink></li>
-			);
+
+			if (i + 1 === segs.length) {
+				links.push(
+					<li key={dest}>{segs[i]}</li>
+				);
+			} else {
+				links.push(
+					<li key={dest}><NavLink to={dest}>{segs[i]}</NavLink></li>
+				);
+			}
 		}
 
 		return (
