@@ -83,6 +83,14 @@ export class Deleter extends Component {
 			});
 		}
 	}
+
+	componentDidUpdate(prevProps) {
+		if (this.state.deleted) {
+			this.setState({
+				deleted: false
+			});
+		}
+	}
 	
 	render() {
 		const [parentKey] = splitKey(this.props.path);

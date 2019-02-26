@@ -14,14 +14,6 @@ import './Regview.css'
 
 //------------------------------------------------------------
 class Regview extends Component {
-	// componentDidMount() {
-	// 	regDb.load().then(() => {
-	// 		this.setState({
-	// 			loading: false
-	// 		});
-	// 	});
-	// }
-
 	render() {
 		return ( 
 			<div className="regview">
