@@ -1,3 +1,9 @@
+let siglofyName = (name) => {
+    return name.replace(/[^a-zA-Z0-9]+/gi, ' ').trim().split(' ').map(
+        s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+    ).join('');
+}
+
 let forEachNode = (data, rootKey, func) => {
     const root = data[rootKey];
     func(root.node);
@@ -30,15 +36,20 @@ let convertToJson = (data) => {
 }
 
 let convertToMacro = (data) => {
-    console.log(data);
     let result = '';
 
     forEachRegister(data, '/', (node) => {
+        const nodeName = siglofyName(node.name)
+        
         result += `// ${node.desc_short}\n`;
-        result += `NN_USB_DEFINE_REG_OFFSET ( ${node.name}, ${node.offset} );\n`;
+        result += `NN_USB_DEFINE_REG_OFFSET ( ${nodeName}, ${node.offset} );\n`;
+        
         node.fields.forEach((field) => {
-            result += `NN_USB_DEFINE_FIELD32    ( ${node.name}, ${field.name}, ${field.bits[1]}, ${field.bits[0]} );\n`;
+            const fieldName = siglofyName(field.name);
+            
+            result += `NN_USB_DEFINE_FIELD32    ( ${nodeName}, ${fieldName}, ${field.bits[1]}, ${field.bits[0]} );\n`;
         });
+        
         result += '\n';
     })
     
@@ -46,7 +57,39 @@ let convertToMacro = (data) => {
 }
 
 let convertToTemplate = (data) => {
-    return "TEMPLATE"
+    console.log(data);
+
+    let result = '#include <nn/util/util_BitPack.h>\n';
+
+    forEachRegister(data, '/', (node) => {
+        let bitpack;
+        switch (node.size) {
+        case 1:
+            bitpack = 'BitPack8';
+            break;
+        case 2:
+            bitpack = 'BitPack16';
+            break;
+        case 4:
+            bitpack = 'BitPack32';
+            break;
+        default:
+            bitpack = 'BitPack_Unsupported';
+            break;
+        }
+        const nodeName = siglofyName(node.name)
+
+        result += `\nstruct ${nodeName} : public nn::util::${bitpack}\n`;
+        result += '{\n';
+        node.fields.forEach((field) => {
+            const fieldName = siglofyName(field.name);
+
+            result += `    typedef nn::util::${bitpack}::Field<${field.bits[0]}, ${field.bits[1] - field.bits[0] + 1}, int> ${fieldName};\n`
+        })
+        result += '};\n';
+    })
+
+    return result;
 }
 
 export let convertTo = (data, format) => {
