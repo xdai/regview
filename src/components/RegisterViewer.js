@@ -57,8 +57,8 @@ class RegisterViewer extends Component {
 	}
 
 	parseField = (val, [low, high]) => {
-		const mask = (1 << (high + 1)) - 1;
-		return (val & mask) >> low;
+		const mask = (1 << (high - low + 1)) - 1;
+		return (val >> low) & mask;
 	}
 
 	shiftFocus = (n) => {
@@ -152,15 +152,16 @@ class RegisterViewer extends Component {
 					otherVal = this.state.decodeArray[this.state.focus[0]];
 				}
 
+				const fieldVal = this.parseField(n, field.bits);
+
 				let highlight;
 				if (otherVal) {
-					const a = this.parseField(n, field.bits);
-					const b = this.parseField(otherVal, field.bits);
-					highlight = (a !== b);
+					const otherFieldVal = this.parseField(otherVal, field.bits);
+					highlight = (fieldVal !== otherFieldVal);
 				} 
 				values.push(
 					<td key={i} className={highlight ? "highlight-field" : ""} >
-						{this.parseField(n, field.bits)}
+						{fieldVal} / 0x{fieldVal.toString(16).toUpperCase()}
 					</td>
 				);
 			});
