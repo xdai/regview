@@ -2,7 +2,7 @@ import React, { Component, Fragment } from 'react';
 import { Redirect } from "react-router-dom";
 
 import { regDb } from '../RegDb';
-import { Warning, NameInput } from './Form';
+import { Warning, NameInput, Keyword } from './Form';
 
 import './GroupEditor.css';
 
@@ -38,6 +38,53 @@ class GroupEditor extends Component {
 			};
 		}
 	}
+
+	validate = (key, val) => {
+		const validator = {
+			'name': value => {
+				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
+					return [true];
+				} else {
+					return [false, <li key="name"><Keyword>{value}</Keyword> is an invalid group name</li>];
+				}
+			},
+			'parent': value => {
+				if (value.match(/^\/[/a-zA-Z0-9_ ]*$/)) {
+					return [true];
+				} else {
+					return [false, <li key="parent"><Keyword>{value}</Keyword> is an invalid parent name</li>];
+				}
+			},
+			'offset': value => {
+				if (value.match(/^[0-9a-f]+$/i)) {
+					return [true];
+				} else {
+					return [false, <li key="offset"><Keyword>{value}</Keyword> is an invalid hex number</li>]
+				}
+			}
+		};
+
+		let error = [];
+		
+		for (let prop in validator) {
+			let rv;
+			if (key === prop) {
+				rv = validator[prop](val);
+			} else {
+				rv = validator[prop](this.state[prop]);
+			}
+
+			if (!rv[0]) {
+				error.push(rv[1]);
+			}
+		}
+
+		if (error.length) {
+			return <ul>{error}</ul>;
+		} else {
+			return null;
+		}
+	}
 	
 	onInputChange = (e) => {
 		const target = e.target;
@@ -46,14 +93,14 @@ class GroupEditor extends Component {
 
 		this.setState({
 			[name]: value,
-			error: undefined
+			error: this.validate(name, value)
 		});
 	}
 
 	commitChange = () => {
 		const data = {
 			name: this.state.name + '/',
-			parent: this.state.parent,
+			parent: this.state.parent.endsWith('/') ? this.state.parent : this.state.parent + '/',
 			offset: this.state.offset
 		};
 
@@ -77,16 +124,12 @@ class GroupEditor extends Component {
 	
 	render() {
 		if (this.state.done) {
+			const parent = this.state.parent.endsWith('/') ? this.state.parent : this.state.parent + '/';
 			return (
-				<Redirect to={"/view" + this.state.parent + this.state.name + "/"}/>
+				<Redirect to={"/view" + parent + this.state.name + "/"}/>
 			);
 		}
 
-		let errorMsg = null;
-		if (this.state.error) {
-			errorMsg = <Warning>{this.state.error}</Warning>;
-		}
-		
 		return (
 			<Fragment>
 				<div className="group-editor">
@@ -106,12 +149,12 @@ class GroupEditor extends Component {
 
 					<button 
 						onClick={this.commitChange} 
-						disabled={!(this.state.offset && this.state.name)}>
+						disabled={this.state.error}>
 						Done
 					</button>
 				</div>
 
-				{errorMsg}
+				<Warning>{this.state.error}</Warning>
 			</Fragment>
 		);
  	}

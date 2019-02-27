@@ -4,9 +4,11 @@ import { Redirect } from "react-router-dom";
 import { regDb } from '../RegDb';
 import { RegContainer, Field } from './RegContainer';
 import { getCoordinate, isInRange } from './Utils';
-import { Warning } from './Form';
+import { Warning, Keyword } from './Form';
 
 import './RegEditor.css';
+
+const MaxRegSize = 64; // in bytes
 
 //------------------------------------------------------------
 class RegEditor extends Component {
@@ -24,6 +26,7 @@ class RegEditor extends Component {
 				desc_long: node.desc_long,
 				fields: node.fields,
 				
+				isEditingField: false,
 				done: false,
 				error: undefined
 			};
@@ -37,26 +40,73 @@ class RegEditor extends Component {
 				desc_long: '',
 				fields: [],
 				
+				isEditingField: false,
 				done: false,
 				error: undefined
 			};
 		}
 	}
 
-	onSizeChange = (e) => {
-		const target = e.target;
-		const value  = target.value;
-		if (parseInt(value, 10) > 64) {
-			this.setState({
-				isInputValid: false,
-				showWarn: true,
-				errorMessage: "Register cannot be more than 64 bytes long"
-			})
+	validate = (key, val) => {
+		const validator = {
+			'name': value => {
+				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
+					return [true];
+				} else {
+					return [false, <li key="name">Register name: <Keyword>{value}</Keyword> is an invalid name</li>];
+				}
+			},
+			'parent': value => {
+				if (value.match(/^\/[/a-zA-Z0-9_ ]*$/)) {
+					return [true];
+				} else {
+					return [false, <li key="parent">Register group: <Keyword>{value}</Keyword> is an invalid parent name</li>];
+				}
+			},
+			'offset': value => {
+				if (value.match(/^[0-9a-f]+$/i)) {
+					return [true];
+				} else {
+					return [false, <li key="offset">Register offset: <Keyword>{value}</Keyword> is an invalid hex number</li>]
+				}
+			},
+			'size': value => {
+				if (value.match(/^[1-9][0-9]*/) && parseInt(value, 10) <= MaxRegSize) {
+					return [true];
+				} else if (value.match(/^\s*$/)) {
+					return [false, <li key="size">Register size: it cannot be empty.</li>]
+				} else {
+					return [false, <li key="size">Register size: <Keyword>{value}</Keyword> is an invalid size. It should be in range <Keyword>[1, {MaxRegSize}]</Keyword>.</li>]
+				}
+			},
+			'desc_short': value => {
+				if (value.match(/\S/)) {
+					return [true];
+				} else {
+					return [false, <li key="desc_short">Register summary cannot be empty</li>]
+				}
+			}
+		};
+
+		let error = [];
+		
+		for (let prop in validator) {
+			let rv;
+			if (key === prop) {
+				rv = validator[prop](val);
+			} else {
+				rv = validator[prop](this.state[prop]);
+			}
+
+			if (!rv[0]) {
+				error.push(rv[1]);
+			}
+		}
+
+		if (error.length) {
+			return <ul>{error}</ul>;
 		} else {
-			this.setState({
-				showWarn: false,
-				size: parseInt(value, 10) * 8
-			})
+			return null;
 		}
 	}
 
@@ -65,14 +115,14 @@ class RegEditor extends Component {
 		const name = target.name;
 		const value = target.value;
 
-		this.updateRegister(name, value);
+		this.setState({
+			[name]: value,
+			error: this.validate(name, value)
+		});
 	}
 
-	updateRegister = (property, value) => {
-		this.setState({
-			[property]: value,
-			error: undefined
-		});
+	canSubmit = () => {
+		return !this.state.error;
 	}
 
 	addField = (field) => {
@@ -102,6 +152,13 @@ class RegEditor extends Component {
 			return ({
 				fields: newFields
 			});
+		});
+	}
+
+	onEditingField = (isEditing) => {
+		console.log(`Editing: ${isEditing ? 'true' : 'false'}`)
+		this.setState({
+			isEditingField: isEditing
 		});
 	}
 
@@ -141,6 +198,15 @@ class RegEditor extends Component {
 				<Redirect to={"/view" + this.state.parent + this.state.name}/>
 			);
 		}
+
+		const submitBtn = 
+			<button 
+				name="field-add-btn" 
+				onClick={this.commitChange} 
+				disabled={!this.canSubmit()}>
+				Done
+			</button>;
+		
 		return (
 			<Fragment>
 				<div className="reg-editor">
@@ -158,7 +224,7 @@ class RegEditor extends Component {
 					<input name="offset" type="text" placeholder="in hex" required onChange={this.onInputChange} value={this.state.offset || ""}/>
 					
 					<label name="size-label">Size:</label>
-					<input name="size" type="number" min={1} max={64} placeholder="in bytes" required onChange={this.onInputChange} value={this.state.size}/>
+					<input name="size" type="number" min={1} max={MaxRegSize} placeholder="in bytes" required onChange={this.onInputChange} value={this.state.size}/>
 					
 					<label name="desc-short-label">Summary:</label>
 					<input name="desc_short" required onChange={this.onInputChange} value={this.state.desc_short || ""}/>
@@ -173,16 +239,12 @@ class RegEditor extends Component {
 						addField={this.addField}
 						updateField={this.updateField}
 						deleteField={this.deleteField}
+						onEditing={this.onEditingField}
 					/>
 
-					<button 
-						name="field-add-btn" 
-						onClick={this.commitChange} 
-						disabled={!(this.state.offset && this.state.desc_short)}>
-						Done
-					</button>
+					{ !this.state.isEditingField && submitBtn }
 				</div>
-				{this.state.error && <Warning>{this.state.error}</Warning>}
+				<Warning>{this.state.error}</Warning>
 			</Fragment>
 		);
 	}
@@ -195,16 +257,71 @@ class RegEditor extends Component {
  */
  class FieldEditor extends Component {
  	constructor(props) {
- 		super(props);
- 		this.state = {
+		super(props);
+		 
+		this.state = {
 			mode: "init",
 			focus: undefined,
 			begin: undefined,
 			end: undefined,
 			field_name: undefined,
-			field_desc: undefined
+			field_desc: undefined,
+
+			error: undefined
  		}
- 	}
+	}
+
+	reset = () => {
+		this.setState({
+			mode: "init",
+			focus: undefined,
+			begin: undefined,
+			end: undefined,
+			field_name: undefined,
+			field_desc: undefined,
+
+			error: undefined
+		});
+
+		this.props.onEditing(false);
+	}
+
+	validate = (key, val) => {
+		const validator = {
+			'field_name': value => {
+				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
+					return [true];
+				} else {
+					return [false, <li key="field_name"><Keyword>{value}</Keyword> is an invalid field name</li>];
+				}
+			}
+		};
+
+		let error = [];
+		
+		for (let prop in validator) {
+			let rv;
+			if (key === prop) {
+				rv = validator[prop](val);
+			} else {
+				rv = validator[prop](this.state[prop]);
+			}
+
+			if (!rv[0]) {
+				error.push(rv[1]);
+			}
+		}
+
+		if (error.length) {
+			return <ul>{error}</ul>;
+		} else {
+			return null;
+		}
+	}
+
+	canSubmit = () => {
+		return this.state.field_name && !this.state.error && (this.state.mode === 'close_field' || this.state.mode === 'close_candidate');
+	}
 
  	// Check if field [begin,end] can be added. I.e. no intersection with other fields
  	canAddField = (begin, end) => {
@@ -224,9 +341,9 @@ class RegEditor extends Component {
 		}
 		
 		return true;
- 	}
+	}
 
- 	// This is called when user clicks on the bits. It drives a simple state machine.
+ 	// when we click on a bit
 	setFieldRange = (pos) => {
 		switch (this.state.mode) {
 		case "init":
@@ -235,6 +352,7 @@ class RegEditor extends Component {
 				begin: pos,
 				end: pos,
 			});
+			this.props.onEditing(true);
 			break;
 		case "open_candidate":
 			if (this.canAddField(this.state.begin, pos)) {
@@ -271,7 +389,7 @@ class RegEditor extends Component {
 		}
 	}
 
-	// This is called when the field is open (i.e. in state "open_candidate") and user hovers on the bits.
+	// when the field is open and we hover on the bit
 	trySetFieldRange = (pos) => {
 		switch (this.state.mode) {
 		case "open_candidate":
@@ -286,37 +404,9 @@ class RegEditor extends Component {
 			break;
 		}
 	}
-
- 	onInputChange = (e) => {
-		const target = e.target;
-		const name = target.name;
-		const value = target.value;
-
-		this.setState({
-			[name]: value
-		});
-	}
-
- 	onAddField = (e) => {
- 		// let index = this.state.fields.findIndex((item) => item.bits[0] > field.bits[0]);
- 		// console.log("Index = " + index);
- 		// this.state.fields.splice(index === -1 ? 0 : index, 0, field);
- 		this.props.addField({
- 			bits: [this.state.begin, this.state.end].sort((a,b) => a - b),
- 			name: this.state.field_name,
- 			meaning: this.state.field_desc
- 		});
-
- 		this.setState({
-			mode: "init",
-			begin: undefined,
-			end: undefined,
-			field_name: undefined,
-			field_desc: undefined
-		});
- 	}
-
- 	onStartUpdating = (pos) => {
+	
+	// when we click on a field
+	onStartUpdating = (pos) => {
 		const idx = this.props.fields.findIndex((e) => e.bits[0] === pos);
 		const field = this.props.fields[idx];
 
@@ -327,9 +417,34 @@ class RegEditor extends Component {
  			end: field.bits[1],
  			field_name: field.name,
  			field_desc: field.meaning
- 		});
- 	}
+		});
+		 
+		this.props.onEditing(true);
+	}
 
+ 	onInputChange = (e) => {
+		const target = e.target;
+		const name = target.name;
+		const value = target.value;
+
+		this.setState({
+			[name]: value,
+			error: this.validate(name, value)
+		});
+	}
+
+	// when "add" button is cicked
+ 	onAddField = (e) => {
+ 		this.props.addField({
+ 			bits: [this.state.begin, this.state.end].sort((a,b) => a - b),
+ 			name: this.state.field_name,
+ 			meaning: this.state.field_desc
+ 		});
+
+ 		this.reset();
+ 	}
+	 
+	// when "update" button is clicked
  	onEndUpdating = () => {
  		this.props.updateField(this.state.focus, {
  			bits: [this.state.begin, this.state.end].sort((a,b) => a - b),
@@ -337,37 +452,19 @@ class RegEditor extends Component {
  			meaning: this.state.field_desc
  		});
 
- 		this.setState({
-			mode: "init",
-			focus: undefined,
-			begin: undefined,
-			end: undefined,
-			field_name: undefined,
-			field_desc: undefined
-		});
+ 		this.reset();
  	}
 
+	// when "cancel" button is clicked
  	onCancelEditing = () => {
- 		this.setState({
-			mode: "init",
-			focus: undefined,
-			begin: undefined,
-			end: undefined,
-			field_name: undefined,
-			field_desc: undefined
-		});
+ 		this.reset();
  	}
 
+	// when "delete" button is clicked
  	onDeleteField = () => {
  		this.props.deleteField(this.state.focus);
- 		this.setState({
-			mode: "init",
-			focus: undefined,
-			begin: undefined,
-			end: undefined,
-			field_name: undefined,
-			field_desc: undefined
-		});
+		 
+		 this.reset();
  	}
 
  	forEachField = (action) => {
@@ -390,7 +487,7 @@ class RegEditor extends Component {
 			pos = high + 1;
 		});
 
-		for(; pos < this.props.size * 8; pos++) {
+		for(; pos < Math.min(MaxRegSize, this.props.size) * 8; pos++) {
 			action(pos);
 		}
 	}
@@ -406,6 +503,18 @@ class RegEditor extends Component {
  	render() {
 		let children = [];
 
+		const highlight = (pos) => {
+			if (isInRange(pos, [this.state.begin, this.state.end])) {
+				if (this.isAddingField()) {
+					return 'adding';
+				} else if (this.isUpdatingField()) {
+					return 'updating';
+				}
+			}
+
+			return 'none'
+		}
+
 		this.forEachField((field) => {
 			if (this.isUpdatingField() && field.bits[0] === this.state.focus) {
 				for (let pos = field.bits[0]; pos <= field.bits[1]; pos++) {
@@ -415,7 +524,7 @@ class RegEditor extends Component {
 							pos={pos} 
 							value={0} 
 							width={this.props.width}
-							highlight={this.state.mode !== "init" && isInRange(pos, [this.state.begin, this.state.end])}
+							highlight={highlight(pos)}
 							setFieldRange={this.setFieldRange}
 							trySetFieldRange={this.trySetFieldRange}
 						/>
@@ -439,7 +548,7 @@ class RegEditor extends Component {
 					pos={pos} 
 					value={0} 
 					width={this.props.width}
-					highlight={this.state.mode !== "init" && isInRange(pos, [this.state.begin, this.state.end])}
+					highlight={highlight(pos)}
 					setFieldRange={this.setFieldRange}
 					trySetFieldRange={this.trySetFieldRange}
 				/>
@@ -449,39 +558,37 @@ class RegEditor extends Component {
 		let form;
 		let submitBtnText;
 		let submitBtnAction;
-		let submitBtnDisabled;
 
 		if (this.isAddingField()) {
 			submitBtnText = "Add Field";
 			submitBtnAction = this.onAddField;
-			submitBtnDisabled = (!this.state.field_name || this.state.mode !== "close_candidate");
 		} else if (this.isUpdatingField()) {
 			submitBtnText = "Update Field";
 			submitBtnAction = this.onEndUpdating;
-			submitBtnDisabled = (!this.state.field_name || this.state.mode !== "close_field");
 		}
 
-		let submitBtn = 
+		const submitBtn = 
 			<button 
 				name="field-submit-btn" 
 				onClick={submitBtnAction} 
-				disabled={submitBtnDisabled}>
+				disabled={!this.canSubmit()}>
 				{submitBtnText}
 			</button>;
-
-		let cancelBtn = 
+		
+		const cancelBtn = 
 			<button 
 				name="field-cancel-btn" 
 				onClick={this.onCancelEditing}>
 				Cancel
 			</button>;
-
-		let deleteBtn = 
+		
+		const deleteBtn = this.isUpdatingField() ?
 			<button 
 				name="field-delete-btn" 
 				onClick={this.onDeleteField}>
 				Delete
-			</button>
+			</button> : null;
+
 
 		if (this.isAddingField() || this.isUpdatingField()) {
 			form = 
@@ -492,19 +599,23 @@ class RegEditor extends Component {
 					<label name="field-desc-label">Field Description:</label>
 					<textarea name="field_desc" onChange={this.onInputChange} value={this.state.field_desc || ""}/>
 
-					{submitBtn}
-					{deleteBtn}
-					{cancelBtn}
+					<div className="field-btns">
+						{submitBtn}
+						{cancelBtn}
+						{deleteBtn}
+					</div>
 				</div>;
 		}
 
  		return (
  			<div className="field-editor">
-	 			<RegContainer width={this.props.width} size={this.props.size}>
+	 			<RegContainer width={this.props.width} size={Math.min(MaxRegSize, this.props.size)}>
 	 				{children}
 	 			</RegContainer>
 
 	 			{form}
+
+				<Warning>{this.state.error}</Warning>
 			</div>
  		);
  	}
@@ -532,13 +643,9 @@ class RegEditor extends Component {
  			gridColumnStart: col,
  			gridColumnEnd: col,
  		};
- 		let className = 'bit';
- 		if (this.props.highlight) {
- 			className += ' active-in-field'
- 		}
- 		
+		 
  		return (
- 			<div className={className} style={bitStyle} onClick={this.onClick} onMouseOver={this.onHover}>
+ 			<div className={`bit active-${this.props.highlight}`} style={bitStyle} onClick={this.onClick} onMouseOver={this.onHover}>
  				{this.props.pos}
  			</div>
  		);

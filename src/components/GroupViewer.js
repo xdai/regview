@@ -31,7 +31,7 @@ class RegTitle extends Component {
 			<span>{reg.name}</span>
 			<span>{reg.desc_short}</span>
 			<span>0x{address.toString(16).toUpperCase()}</span>
-			<span>+{reg.offset}</span>
+			<span>+0x{reg.offset.toUpperCase()}</span>
 		</Link>
     );
   }

@@ -2,6 +2,7 @@ table {
 	width: 800px;
 	margin: 50px auto;
 	overflow: hidden;
+	font-size: 90%;
 }
 
 table, th, td {

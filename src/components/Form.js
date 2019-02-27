@@ -9,18 +9,18 @@ import './Form.css';
 
 export class Warning extends Component {
 	render() {
-		return (
+		return this.props.children ? (
 			<div className="warning">
 				{this.props.children}
 			</div>
-		);
+		) : null;
  	}
 }
 
-export class PathLabel extends Component {
+export class Keyword extends Component {
 	render() {
 		return (
-			<span className="path-label">{this.props.children}</span>
+			<span className="keyword-label">{this.props.children}</span>
 		);
 	}
 }

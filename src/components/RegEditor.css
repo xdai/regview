@@ -42,6 +42,7 @@
 
 .reg-editor [name="desc_long"] {
 	grid-area: reg-detail-area;
+	height: 100px;
 }
 
 .field-editor {
@@ -55,11 +56,39 @@
 	grid-template-columns: 140px auto;
 }
 
+.field-form textarea {
+	height: 100px;
+}
+
+.field-form .field-btns {
+	grid-column: 1/3;
+	width: 100%;
+	display: grid;
+	grid-gap: 10px;
+	grid-template-columns: 1fr repeat(3, 120px) 1fr;
+}
+
+.field-form button[name="field-submit-btn"] {
+	grid-column: 2;
+}
+
+.field-form button[name="field-cancel-btn"] {
+	grid-column: 3;
+}
+
+.field-form button[name="field-delete-btn"] {
+	grid-column: 4;
+}
+
 div.bit {
 	background-color: #fff;
 	cursor: pointer;
 }
 
-div.bit.active-in-field {
+div.bit.active-adding {
 	background-color: #deff97;
+}
+
+div.bit.active-updating {
+	background-color: #ffb3ba;
 }

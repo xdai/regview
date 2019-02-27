@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Redirect } from "react-router-dom";
 
 import { regDb } from '../RegDb';
-import { Warning, PathLabel } from './Form';
+import { Warning, Keyword } from './Form';
 
 export function str2hex(s) {
 	return parseInt(s, 16);
@@ -123,7 +123,7 @@ export function withReload(WrappedComponent) {
 				} else {
 					return (
 						<Warning>
-							Entry <PathLabel>{this.state.path}</PathLabel> doesn't exist
+							Entry <Keyword>{this.state.path}</Keyword> doesn't exist
 						</Warning>
 					)
 				}

@@ -1,7 +1,7 @@
 import React, { Component, Fragment } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 
-import { parsePath } from './Utils';
+import { parsePath, splitKey } from './Utils';
 import { Exporter, Deleter } from './Form';
 
 // Font Awesome
@@ -47,15 +47,9 @@ class NavBar extends Component {
 				dest += "/";
 			}
 
-			if (i + 1 === segs.length) {
-				links.push(
-					<li key={dest}>{segs[i]}</li>
-				);
-			} else {
-				links.push(
-					<li key={dest}><NavLink to={dest}>{segs[i]}</NavLink></li>
-				);
-			}
+			links.push(
+				<li key={dest}><NavLink to={dest}>{segs[i]}</NavLink></li>
+			);
 		}
 
 		return (
@@ -78,17 +72,20 @@ class NavBar extends Component {
 			actions = 
 				<Fragment>
 					{path !== '/' && <Link to={"/edit" + path}>Edit this group</Link>}
-					<Link to={'/new/group' + path}>Add new group</Link>
-					<Link to={'/new/register' + path}>Add new register</Link>
+					<Link to={'/new/group' + path}>Add new group (child)</Link>
+					<Link to={'/new/register' + path}>Add new register (child)</Link>
 					<Deleter path={path}>Delete (recursively)</Deleter>
 					<Exporter path={path} format="json">Export as JSON...</Exporter>
 					<Exporter path={path} format="macro">Export as Macro...</Exporter>
 					<Exporter path={path} format="template">Export as Bitpack...</Exporter>
 				</Fragment>;
 		} else {
+			const [parent] = splitKey(path);
 			actions = 
 				<Fragment>
 					<Link to={"/edit" + path}>Edit this register</Link>
+					<Link to={'/new/group' + parent}>Add new group (sibling)</Link>
+					<Link to={'/new/register' + parent}>Add new register (sibling)</Link>
 					<Deleter path={path}>Delete (recursively)</Deleter>
 					<Exporter path={path} format="json">Export as JSON...</Exporter>
 					<Exporter path={path} format="macro">Export as Macro...</Exporter>
