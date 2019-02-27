@@ -51,7 +51,10 @@ export class Exporter extends Component {
 		if (name === '/') {
 			name = 'register';
 		}
-		name += '.h';
+		if (name.endsWith('/')) {
+			name = name.slice(0, -1);
+		}
+		name += format === 'json' ? '.json' : '.h';
 
 		regDb.getHierarchy(path).then((data) => this.saveAs(convertTo(data, format).data, name));
 	}
