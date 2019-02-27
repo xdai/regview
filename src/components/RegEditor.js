@@ -110,7 +110,7 @@ class RegEditor extends Component {
 			name: this.state.name,
 			parent: this.state.parent,
 			offset: this.state.offset,
-			width: this.state.size,
+			size: this.state.size,
 			desc_short: this.state.desc_short,
 			desc_long: this.state.desc_long,
 			fields: this.state.fields
@@ -149,7 +149,7 @@ class RegEditor extends Component {
 					
 					<label name="parent-label">Group:</label>
 					{ 
-						this.state.mode === '/edit' ? 
+						this.props.op === '/edit' ? 
 						<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/> :
 						<label>{this.state.parent}</label>
 					}
@@ -304,7 +304,7 @@ class RegEditor extends Component {
  		this.props.addField({
  			bits: [this.state.begin, this.state.end].sort((a,b) => a - b),
  			name: this.state.field_name,
- 			desc_long: this.state.field_desc
+ 			meaning: this.state.field_desc
  		});
 
  		this.setState({
