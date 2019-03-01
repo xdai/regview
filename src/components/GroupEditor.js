@@ -30,9 +30,9 @@ class GroupEditor extends Component {
 			};
 		} else {
 			this.state = {
-				name: undefined,
+				name: '',
 				parent: this.props.path,
-				offset: 0,
+				offset: '0',
 
 				error: undefined
 			};
@@ -44,22 +44,28 @@ class GroupEditor extends Component {
 			'name': value => {
 				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
 					return [true];
+				} else if (value.match(/^\s*$/)) {
+					return [false, <li key="name">Group name: it cannot be empty.</li>]
 				} else {
-					return [false, <li key="name"><Keyword>{value}</Keyword> is an invalid group name</li>];
+					return [false, <li key="name">Group name: <Keyword>{value}</Keyword> is an invalid name</li>];
 				}
 			},
 			'parent': value => {
 				if (value.match(/^\/[/a-zA-Z0-9_ ]*$/)) {
 					return [true];
+				} else if (value.match(/^\s*$/)) {
+					return [false, <li key="parent">Group parent: it cannot be empty.</li>]
 				} else {
-					return [false, <li key="parent"><Keyword>{value}</Keyword> is an invalid parent name</li>];
+					return [false, <li key="parent">Group parent: <Keyword>{value}</Keyword> is an invalid name</li>];
 				}
 			},
 			'offset': value => {
 				if (value.match(/^[0-9a-f]+$/i)) {
 					return [true];
-				} else {
-					return [false, <li key="offset"><Keyword>{value}</Keyword> is an invalid hex number</li>]
+				} else if (value.match(/^\s*$/)) {
+					return [false, <li key="offset">Group offset: it cannot be empty.</li>]
+				}  else {
+					return [false, <li key="offset">Group offset: <Keyword>{value}</Keyword> is an invalid hex number</li>]
 				}
 			}
 		};
