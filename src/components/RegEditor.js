@@ -34,8 +34,8 @@ class RegEditor extends Component {
 			this.state = {
 				name: '',
 				parent: this.props.path,
-				offset: 0,
-				size: 4,
+				offset: '0',
+				size: '4',
 				desc_short: '',
 				desc_long: '',
 				fields: [],
@@ -156,7 +156,6 @@ class RegEditor extends Component {
 	}
 
 	onEditingField = (isEditing) => {
-		console.log(`Editing: ${isEditing ? 'true' : 'false'}`)
 		this.setState({
 			isEditingField: isEditing
 		});
@@ -289,7 +288,7 @@ class RegEditor extends Component {
 	validate = (key, val) => {
 		const validator = {
 			'field_name': value => {
-				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
+				if (value.match(/^[a-zA-Z][a-zA-Z0-9_/ ]*$/)) {
 					return [true];
 				} else {
 					return [false, <li key="field_name"><Keyword>{value}</Keyword> is an invalid field name</li>];
