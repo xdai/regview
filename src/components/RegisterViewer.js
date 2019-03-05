@@ -133,13 +133,13 @@ class RegisterViewer extends Component {
 		this.state.decodeArray.forEach((n, i) => {
 			if (i === this.state.focus[0] || i === this.state.focus[1]) {
 				extraHeader.push(
-					<th key={i} className="focus-header">
+					<th key={i} className="focus-header" colspan="2">
 						{num2hexstr(n)}
 					</th>
 				);
 			} else {
 				extraHeader.push(
-					<th key={i} className="value-header" onClick={() => this.shiftFocus(i)}>
+					<th key={i} className="value-header" colspan="2" onClick={() => this.shiftFocus(i)}>
 						{num2hexstr(n)}
 					</th>
 				);
@@ -164,8 +164,13 @@ class RegisterViewer extends Component {
 					highlight = (fieldVal !== otherFieldVal);
 				} 
 				values.push(
-					<td key={i} className={highlight ? "highlight-field" : ""} >
-						{fieldVal} / 0x{fieldVal.toString(16).toUpperCase()}
+					<td key={i+"d"} className={highlight ? "highlight-field" : ""} >
+						{fieldVal}
+					</td>
+				);
+				values.push(
+					<td key={i+"h"} className={highlight ? "highlight-field" : ""} >
+						0x{fieldVal.toString(16).toUpperCase()}
 					</td>
 				);
 			});
