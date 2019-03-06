@@ -133,13 +133,13 @@ class RegisterViewer extends Component {
 		this.state.decodeArray.forEach((n, i) => {
 			if (i === this.state.focus[0] || i === this.state.focus[1]) {
 				extraHeader.push(
-					<th key={i} className="focus-header" colspan="2">
+					<th key={i} className="focus-header" colSpan="2">
 						{num2hexstr(n)}
 					</th>
 				);
 			} else {
 				extraHeader.push(
-					<th key={i} className="value-header" colspan="2" onClick={() => this.shiftFocus(i)}>
+					<th key={i} className="value-header" colSpan="2" onClick={() => this.shiftFocus(i)}>
 						{num2hexstr(n)}
 					</th>
 				);
