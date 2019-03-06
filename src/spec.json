@@ -1,123 +1,1282 @@
 [
-	{
-		"name": "/",
-		"offset": "0x00000000"
-	}, {
-		"name": "Capability/",
-		"parent": "/",
-		"offset": "0x60000000"
-	}, {
-		"name": "Operational/",
-		"parent": "/",
-		"offset": "0x70000000"
-	}, {
-		"name": "Runtime/",
-		"parent": "/",
-		"offset": "0x80000000"
-	}, {
-		"name": "Ender/",
-		"parent": "/Capability/",
-		"offset": "0x65000000"
-	}, {
-		"name": "CAPLENGTH",
-		"parent": "/Capability/Ender/",
-		"desc_short": "Capability Registers Length",
-		"desc_long": "This register is used as an offset to add to register base to find the beginning of the Operational Register Space.",
-		"offset": "0x10",
-		"size": 1,
-		"fields":
-		[
-			{
-				"bits": [0,7],
-				"name": "Length",
-				"meaning": "The offset to add to register base to find the beginning of the Operational Register Space."
-			}
-		]
-	}, {
-		"name": "HCSPARAMS1",
-		"parent": "/Capability/",
-		"desc_short": "Structural Parameters 1",
-		"desc_long": "This register defines basic structural parameters supported by this xHC implementation: Number of Device Slots support, Interrupters, Root Hub ports, etc.",
-		"offset": "0x04",
-		"size": 4,
-		"fields":
-		[
-			{
-				"bits": [0,7],
-				"name": "MaxSlots",
-				"meaning": "Number of Device Slots."
-			},
-			{
-				"bits": [8,18],
-				"name": "MaxIntrs",
-				"meaning": "Number of Interrupters."
-			},
-			{
-				"bits": [19,23],
-				"name": "Rsvd",
-				"meaning": "Reserved."
-			},
-			{
-				"bits": [24,31],
-				"name": "MaxPorts",
-				"meaning": "Number of Ports."
-			}
-		]
-	}, {
-		"name": "USBCMD",
-		"parent": "/Operational/",
-		"offset": "0x1F",
-		"size": 4,
-		"desc_short": "USB Command Register",
-		"desc_long": "The Command Register indicates the command to be executed by the serial bus host controller. Writing to the register causes a command to be executed.",
-
-		"fields" :
-		[
-			{
-				"name": "R/S",
-				"bits": [0, 0],
-				"meaning": "Run/Stop"
-			},{
-				"name": "HCRST",
-				"bits": [1, 1],
-				"meaning": "Host Controller Reset"
-			},{
-				"name": "INTE",
-				"bits": [2, 2],
-				"meaning": "Interrupter Enable"
-			},{
-				"name": "HSEE",
-				"bits": [3, 3],
-				"meaning": "Host System Error Enable"
-			},{
-				"name": "LHCRST",
-				"bits": [7, 7],
-				"meaning": "Light Host Controller Reset"
-			},{
-				"name": "CSS",
-				"bits": [8, 8],
-				"meaning": "Controller Save State"
-			},{
-				"name": "CRS",
-				"bits": [9, 9],
-				"meaning": "Controller Restore State"
-			},{
-				"name": "EWE",
-				"bits": [10, 10],
-				"meaning": "Enable Wrap Event"
-			},{
-				"name": "EU3S",
-				"bits": [11, 11],
-				"meaning": "Enable U3 MFINDEX Stop"
-			},{
-				"name": "SPE",
-				"bits": [12, 12],
-				"meaning": "Stopped - Short Packet Enable"
-			},{
-				"name": "CME",
-				"bits": [13, 13],
-				"meaning": "CEM Enable"
-			}
-		]
-	}
+  {
+    "name": "/",
+    "offset": "0x00000000"
+  },
+  {
+    "name": "XHCI/",
+    "parent": "/",
+    "offset": "0"
+  },
+  {
+    "name": "Capability/",
+    "parent": "/XHCI/",
+    "offset": "0"
+  },
+  {
+    "name": "CAPLENGTH",
+    "parent": "/XHCI/Capability/",
+    "offset": "0",
+    "size": "1",
+    "desc_short": "Capability Registers Length",
+    "desc_long": "This register is used as an offset to add to register base to find the beginning of the Operational Register Space.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          7
+        ],
+        "name": "Length",
+        "meaning": "Capability Registers Length"
+      }
+    ]
+  },
+  {
+    "name": "DBOFF",
+    "parent": "/XHCI/Capability/",
+    "offset": "14",
+    "size": 4,
+    "desc_short": "Doorbell Offset",
+    "desc_long": "This register defines the offset of the Doorbell Array base address from the Base.\n",
+    "fields": [
+      {
+        "bits": [
+          2,
+          31
+        ],
+        "name": "Doorbell Array Offset",
+        "meaning": "Doorbell Array Offset - RO. Default = implementation dependent. This field defines the\noffset in Dwords of the Doorbell Array base address from the Base (i.e. the base address of\nthe xHCI Capability register address space)"
+      }
+    ]
+  },
+  {
+    "name": "HCCPARAMS1",
+    "parent": "/XHCI/Capability/",
+    "offset": "10",
+    "size": 4,
+    "desc_short": "Capability Parameters 1",
+    "desc_long": "This register defines optional capabilities supported by the xHCI.\n",
+    "fields": [
+      {
+        "bits": [
+          0,
+          0
+        ],
+        "name": "AC64",
+        "meaning": "64-bit Addressing Capabilitya (AC64). This flag documents the addressing range capability\nof this implementation. The value of this flag determines whether the xHC has implemented the\nhigh order 32 bits of 64 bit register and data structure pointer fields. Values for this flag have\nthe following interpretation:\nValue Description\n0 32-bit address memory pointers implemented\n1 64-bit address memory pointers implemented\nIf 32-bit address memory pointers are implemented, the xHC shall ignore the high order 32 bits\nof 64 bit data structure pointer fields, and system software shall ignore the high order 32 bits of\n64 bit xHC registers."
+      },
+      {
+        "bits": [
+          1,
+          1
+        ],
+        "name": "BNC",
+        "meaning": "BW Negotiation Capability (BNC). This flag identifies whether the xHC has implemented the\nBandwidth Negotiation. Values for this flag have the following interpretation:\nValue Description\n0 BW Negotiation not implemented\n1 BW Negotiation implemented\nRefer to section 4.16 for more information on Bandwidth Negotiation."
+      },
+      {
+        "bits": [
+          2,
+          2
+        ],
+        "name": "CSZ",
+        "meaning": "Context Size (CSZ). If this bit is set to ‘1’, then the xHC uses 64 byte Context data structures.\nIf this bit is cleared to ‘0’, then the xHC uses 32 byte Context data structures.\nNote: This flag does not apply to Stream Contexts"
+      },
+      {
+        "bits": [
+          3,
+          3
+        ],
+        "name": "PPC",
+        "meaning": "Port Power Control (PPC). This flag indicates whether the host controller implementation\nincludes port power control. A ‘1’ in this bit indicates the ports have port power switches. A ‘0’ in\nthis bit indicates the port do not have port power switches. The value of this flag affects the\nfunctionality of the PP flag in each port status and control register (refer to Section 5.4.8)."
+      },
+      {
+        "bits": [
+          4,
+          4
+        ],
+        "name": "PIND",
+        "meaning": "Port Indicators (PIND). This bit indicates whether the xHC root hub ports support port\nindicator control. When this bit is a ‘1’, the port status and control registers include a read/\nwriteable field for controlling the state of the port indicator. Refer to Section 5.4.8 for definition\nof the Port Indicator Control field."
+      },
+      {
+        "bits": [
+          5,
+          5
+        ],
+        "name": "LHRC",
+        "meaning": "Light HC Reset Capability (LHRC). This flag indicates whether the host controller\nimplementation supports a Light Host Controller Reset. A ‘1’ in this bit indicates that Light Host\nController Reset is supported. A ‘0’ in this bit indicates that Light Host Controller Reset is not\nsupported. The value of this flag affects the functionality of the Light Host Controller Reset\n(LHCRST) flag in the USBCMD register (refer to Section 5.4.1)."
+      },
+      {
+        "bits": [
+          6,
+          6
+        ],
+        "name": "LTC",
+        "meaning": "Latency Tolerance Messaging Capability (LTC). This flag indicates whether the host\ncontroller implementation supports Latency Tolerance Messaging (LTM). A ‘1’ in this bit\nindicates that LTM is supported. A ‘0’ in this bit indicates that LTM is not supported. Refer to\nsection 4.13.1 for more information on LTM."
+      },
+      {
+        "bits": [
+          7,
+          7
+        ],
+        "name": "NSS",
+        "meaning": "No Secondary SID Support (NSS). This flag indicates whether the host controller\nimplementation supports Secondary Stream IDs. A ‘1’ in this bit indicates that Secondary\nStream ID decoding is not supported. A ‘0’ in this bit indicates that Secondary Stream ID\ndecoding is supported. (refer to Sections 4.12.2 and 6.2.3)"
+      },
+      {
+        "bits": [
+          8,
+          8
+        ],
+        "name": "PAE",
+        "meaning": "Parse All Event Data (PAE). This flag indicates whether the host controller implementation\nParses all Event Data TRBs while advancing to the next TD after a Short Packet, or it skips all\nbut the first Event Data TRB. A ‘1’ in this bit indicates that all Event Data TRBs are parsed. A ‘0’\nin this bit indicates that only the first Event Data TRB is parsed (refer to section 4.10.1.1)."
+      },
+      {
+        "bits": [
+          9,
+          9
+        ],
+        "name": "SPC",
+        "meaning": "Stopped - Short Packet Capability (SPC). This flag indicates that the host controller\nimplementation is capable of generating a Stopped - Short Packet Completion Code. Refer to\nsection 4.6.9 for more information."
+      },
+      {
+        "bits": [
+          10,
+          10
+        ],
+        "name": "SEC",
+        "meaning": "Stopped EDTLA Capability (SEC). This flag indicates that the host controller implementation\nStream Context support a Stopped EDTLA field. Refer to sections 4.6.9, 4.12, and 6.2.4.1 for\nmore information.\nStopped EDTLA Capability support (i.e. SEC = '1') shall be mandatory for all xHCI 1.1\ncompliant xHCs."
+      },
+      {
+        "bits": [
+          11,
+          11
+        ],
+        "name": "CFC",
+        "meaning": "Contiguous Frame ID Capability (CFC). This flag indicates that the host controller\nimplementation is capable of matching the Frame ID of consecutive Isoch TDs. Refer to section\n4.11.2.5 for more information."
+      },
+      {
+        "bits": [
+          12,
+          15
+        ],
+        "name": "MaxPSASize",
+        "meaning": "Maximum Primary Stream Array Size (MaxPSASize). This fields identifies the maximum size\nPrimary Stream Array that the xHC supports. The Primary Stream Array size = 2MaxPSASize+1.\nValid MaxPSASize values are 0 to 15, where ‘0’ indicates that Streams are not supported."
+      },
+      {
+        "bits": [
+          16,
+          31
+        ],
+        "name": "xECP",
+        "meaning": "xHCI Extended Capabilities Pointer (xECP). This field indicates the existence of a\ncapabilities list. The value of this field indicates a relative offset, in 32-bit words, from Base to\nthe beginning of the first extended capability.\nFor example, using the offset of Base is 1000h and the xECP value of 0068h, we can\ncalculated the following effective address of the first extended capability:\n1000h + (0068h << 2) -> 1000h + 01A0h -> 11A0h"
+      }
+    ]
+  },
+  {
+    "name": "HCCPARAMS2",
+    "parent": "/XHCI/Capability/",
+    "offset": "1c",
+    "size": 4,
+    "desc_short": "Capability Parameters 2",
+    "desc_long": "This register defines optional capabilities supported by the xHCI.\n",
+    "fields": [
+      {
+        "bits": [
+          0,
+          0
+        ],
+        "name": "U3C",
+        "meaning": "U3 Entry Capability (U3C) - RO. This bit indicates whether the xHC Root Hub ports support\nport Suspend Complete notification. When this bit is '1', PLC shall be asserted on any transition\nof PLS to the U3 State. Refer to section 4.15.1 for more information."
+      },
+      {
+        "bits": [
+          1,
+          1
+        ],
+        "name": "CMC",
+        "meaning": "Configure Endpoint Command Max Exit Latency Too Large Capability (CMC) - RO. This\nbit indicates whether a Configure Endpoint Command is capable of generating a Max Exit\nLatency Too Large Capability Error. When this bit is '1', a Max Exit Latency Too Large\nCapability Error may be returned by a Configure Endpoint Command. When this bit is '0', a Max\nExit Latency Too Large Capability Error shall not be returned by a Configure Endpoint\nCommand. This capability is enabled by the CME flag in the USBCMD register. Refer to\nsections 4.23.5.2 and 5.4.1 for more information"
+      },
+      {
+        "bits": [
+          2,
+          2
+        ],
+        "name": "FSC",
+        "meaning": "Force Save Context Capability (FSC) - RO. This bit indicates whether the xHC supports the\nForce Save Context Capability. When this bit is '1', the Save State operation shall save any\ncached Slot, Endpoint, Stream or other Context information to memory. Refer to\nImplementation Note “FSC and Context handling by Save and Restore”, and sections 4.23.2\nand 5.4.1 for more information."
+      },
+      {
+        "bits": [
+          3,
+          3
+        ],
+        "name": "CTC",
+        "meaning": "Compliance Transition Capability (CTC) - RO. This bit indicates whether the xHC USB3\nRoot Hub ports support the Compliance Transition Enabled (CTE) flag. When this bit is ‘1’,\nUSB3 Root Hub port state machine transitions to the Compliance substate shall be explicitly\nenabled software. When this bit is ‘0’, USB3 Root Hub port state machine transitions to the\nCompliance substate are automatically enabled. Refer to section 4.19.1.2.4.1 for more\ninformation."
+      },
+      {
+        "bits": [
+          4,
+          4
+        ],
+        "name": "LEC",
+        "meaning": "Large ESIT Payload Capability (LEC) - RO. This bit indicates whether the xHC supports ESIT\nPayloads greater than 48K bytes. When this bit is ‘1’, ESIT Payloads greater than 48K bytes\nare supported. When this bit is ‘0’, ESIT Payloads greater than 48K bytes are not supported.\nRefer to section 6.2.3.8 for more information."
+      },
+      {
+        "bits": [
+          5,
+          5
+        ],
+        "name": "CIC",
+        "meaning": "Configuration Information Capability (CIC) - RO. This bit indicates if the xHC supports\nextended Configuration Information. When this bit is 1, the Configuration Value, Interface\nNumber, and Alternate Setting fields in the Input Control Context are supported. When this bit\nis 0, the extended Input Control Context fields are not supported. Refer to section 6.2.5.1 for\nmore information."
+      }
+    ]
+  },
+  {
+    "name": "HCIVERSION",
+    "parent": "/XHCI/Capability/",
+    "offset": "2",
+    "size": "2",
+    "desc_short": "Host Controller Interface Version Number",
+    "desc_long": "This is a two-byte register containing a BCD encoding of the xHCI specification revision number supported\nby this host controller. The most significant byte of this register represents a major revision and the least\nsignificant byte is the minor revision. e.g. 0100h corresponds to xHCI version 1.0.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          15
+        ],
+        "name": "BcdVersion",
+        "meaning": "BCD encoded xHCI specification revision number supported\nby this host controller"
+      }
+    ]
+  },
+  {
+    "name": "HCSPARAMS1",
+    "parent": "/XHCI/Capability/",
+    "offset": "4",
+    "size": 4,
+    "desc_short": "Structural Parameters 1",
+    "desc_long": "This register defines basic structural parameters supported by this xHC implementation: Number of Device\nSlots support, Interrupters, Root Hub ports, etc.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          7
+        ],
+        "name": "MaxSlots",
+        "meaning": "Number of Device Slots (MaxSlots). This field specifies the maximum number of Device\nContext Structures and Doorbell Array entries this host controller can support. Valid values are\nin the range of 1 to 255. The value of ‘0’ is reserved."
+      },
+      {
+        "bits": [
+          8,
+          18
+        ],
+        "name": "MaxIntrs",
+        "meaning": "Number of Interrupters (MaxIntrs). This field specifies the number of Interrupters implemented\non this host controller. Each Interrupter may be allocated to a MSI or MSI-X vector and controls\nits generation and moderation.\nThe value of this field determines how many Interrupter Register Sets are addressable in the\nRuntime Register Space (refer to section 5.5). Valid values are in the range of 1h to 400h. A ‘0’\nin this field is undefined."
+      },
+      {
+        "bits": [
+          24,
+          31
+        ],
+        "name": "MaxPorts",
+        "meaning": "Number of Ports (MaxPorts). This field specifies the maximum Port Number value, i.e. the\nhighest numbered Port Register Set that are addressable in the Operational Register Space\n(refer to Table 30). Valid values are in the range of 1h to FFh.\nThe value in this field shall reflect the maximum Port Number value assigned by an xHCI\nSupported Protocol Capability, described in section 7.2. Software shall refer to these capabilities\nto identify whether a specific Port Number is valid, and the protocol supported by the associated\nPort Register Set."
+      }
+    ]
+  },
+  {
+    "name": "HCSPARAMS2",
+    "parent": "/XHCI/Capability/",
+    "offset": "8",
+    "size": 4,
+    "desc_short": "Structural Parameters 2",
+    "desc_long": "This register defines additional xHC structural parameters.\n",
+    "fields": [
+      {
+        "bits": [
+          0,
+          3
+        ],
+        "name": "IST",
+        "meaning": "Isochronous Scheduling Threshold (IST). Default = implementation dependent. The value in\nthis field indicates to system software the minimum distance (in time) that it is required to stay\nahead of the host controller while adding TRBs, in order to have the host controller process\nthem at the correct time. The value shall be specified in terms of number of frames/\nmicroframes.\nIf bit [3] of IST is cleared to '0', software can add a TRB no later than IST[2:0] Microframes\nbefore that TRB is scheduled to be executed.\nIf bit [3] of IST is set to '1', software can add a TRB no later than IST[2:0] Frames before that\nTRB is scheduled to be executed.\nRefer to Section 4.14.2 for details on how software uses this information for scheduling\nisochronous transfers"
+      },
+      {
+        "bits": [
+          4,
+          7
+        ],
+        "name": "ERST Max",
+        "meaning": "Event Ring Segment Table Max (ERST Max). Default = implementation dependent. Valid\nvalues are 0 – 15. This field determines the maximum value supported the Event Ring\nSegment Table Base Size registers (5.5.2.3.1), where:\nThe maximum number of Event Ring Segment Table entries = 2 ERST Max.\ne.g. if the ERST Max = 7, then the xHC Event Ring Segment Table(s) supports up to 128\nentries, 15 then 32K entries, etc."
+      },
+      {
+        "bits": [
+          21,
+          25
+        ],
+        "name": "Max Scratchpad Bufs Hi",
+        "meaning": "Max Scratchpad Buffers (Max Scratchpad Bufs Hi). Default = implementation dependent.\nThis field indicates the high order 5 bits of the number of Scratchpad Buffers system software\nshall reserve for the xHC. Refer to section 4.20 for more information."
+      },
+      {
+        "bits": [
+          26,
+          26
+        ],
+        "name": "SPR",
+        "meaning": "Scratchpad Restore (SPR). Default = implementation dependent. If Max Scratchpad Buffers\nis > ‘0’ then this flag indicates whether the xHC uses the Scratchpad Buffers for saving state\nwhen executing Save and Restore State operations. If Max Scratchpad Buffers is = ‘0’ then this\nflag shall be ‘0’. Refer to section 4.23.2 for more information.\nA value of ‘1’ indicates that the xHC requires the integrity of the Scratchpad Buffer space to be\nmaintained across power events.\nA value of ‘0’ indicates that the Scratchpad Buffer space may be freed and reallocated between\npower events."
+      },
+      {
+        "bits": [
+          27,
+          31
+        ],
+        "name": "Max Scratchpad Bufs Lo",
+        "meaning": "Max Scratchpad Buffers (Max Scratchpad Bufs Lo). Default = implementation dependent.\nValid values for Max Scratchpad Buffers (Hi and Lo) are 0-1023. This field indicates the low\norder 5 bits of the number of Scratchpad Buffers system software shall reserve for the xHC.\nRefer to section 4.20 for more information."
+      }
+    ]
+  },
+  {
+    "name": "HCSPARAMS3",
+    "parent": "/XHCI/Capability/",
+    "offset": "c",
+    "size": 4,
+    "desc_short": "Structural Parameters 3",
+    "desc_long": "This register defines link exit latency related structural parameters.\n",
+    "fields": [
+      {
+        "bits": [
+          0,
+          7
+        ],
+        "name": "U1 Device Exit Latency",
+        "meaning": "U1 Device Exit Latency. Worst case latency to transition a root hub Port Link State (PLS) from\nU1 to U0. Applies to all root hub ports.\nThe following are permissible values:\nValue Description\n00h Zero\n01h Less than 1 µs\n02h Less than 2 µs.\n…\n0Ah Less than 10 µs.\n0B-FFh Reserved"
+      },
+      {
+        "bits": [
+          16,
+          31
+        ],
+        "name": "U2 Device Exit Latency",
+        "meaning": "U2 Device Exit Latency. Worst case latency to transition from U2 to U0. Applies to all root hub\nports.\nThe following are permissible values:\nValue Description\n0000h Zero\n0001h Less than 1 µs.\n0002h Less than 2 µs.\n…\n07FFh Less than 2047 µs.\n0800-FFFFh Reserved"
+      }
+    ]
+  },
+  {
+    "name": "RTSOFF",
+    "parent": "/XHCI/Capability/",
+    "offset": "18",
+    "size": 4,
+    "desc_short": "Runtime Register Space Offset",
+    "desc_long": "This register defines the offset of the xHCI Runtime Registers from the Base.\n",
+    "fields": [
+      {
+        "bits": [
+          5,
+          31
+        ],
+        "name": "Runtime Register Space Offset",
+        "meaning": "Runtime Register Space Offset - RO. Default = implementation dependent. This field\ndefines the 32-byte offset of the xHCI Runtime Registers from the Base. i.e. Runtime\nRegister Base Address = Base + Runtime Register Set Offset"
+      }
+    ]
+  },
+  {
+    "name": "Doorbell Array/",
+    "parent": "/XHCI/",
+    "offset": "0"
+  },
+  {
+    "name": "Doorbell",
+    "parent": "/XHCI/Doorbell Array/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": " Doorbell Register",
+    "desc_long": "",
+    "fields": [
+      {
+        "bits": [
+          0,
+          7
+        ],
+        "name": "DB Target ",
+        "meaning": "DB Target "
+      },
+      {
+        "bits": [
+          16,
+          31
+        ],
+        "name": "DB Stream ID",
+        "meaning": "DB Stream ID"
+      }
+    ]
+  },
+  {
+    "name": "Operational/",
+    "parent": "/XHCI/",
+    "offset": "0"
+  },
+  {
+    "name": "CONFIG",
+    "parent": "/XHCI/Operational/",
+    "offset": "38",
+    "size": "4",
+    "desc_short": "Configure Register",
+    "desc_long": "This register defines runtime xHC configuration parameters.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          7
+        ],
+        "name": "MaxSlotsEn",
+        "meaning": "Max Device Slots Enabled"
+      },
+      {
+        "bits": [
+          8,
+          8
+        ],
+        "name": "U3E",
+        "meaning": "U3 Entry Enable"
+      },
+      {
+        "bits": [
+          9,
+          9
+        ],
+        "name": "CIE",
+        "meaning": "Configuration Information Enable "
+      }
+    ]
+  },
+  {
+    "name": "CRCR",
+    "parent": "/XHCI/Operational/",
+    "offset": "18",
+    "size": "8",
+    "desc_short": "Command Ring Control Register",
+    "desc_long": "The Command Ring Control Register provides Command Ring control and status capabilities, and\nidentifies the address and Cycle bit state of the Command Ring Dequeue Pointer.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          0
+        ],
+        "name": "RCS",
+        "meaning": "Ring Cycle State"
+      },
+      {
+        "bits": [
+          1,
+          1
+        ],
+        "name": "CS",
+        "meaning": "Command Stop"
+      },
+      {
+        "bits": [
+          2,
+          2
+        ],
+        "name": "CA",
+        "meaning": "Command Abort"
+      },
+      {
+        "bits": [
+          3,
+          3
+        ],
+        "name": "CRR",
+        "meaning": "Command Ring Running"
+      },
+      {
+        "bits": [
+          6,
+          31
+        ],
+        "name": "Command Ring Pointer Lo",
+        "meaning": "Command Ring Pointer Low"
+      },
+      {
+        "bits": [
+          32,
+          63
+        ],
+        "name": "Command Ring Pointer Hi",
+        "meaning": "Command Ring Pointer High"
+      }
+    ]
+  },
+  {
+    "name": "DCBAAP",
+    "parent": "/XHCI/Operational/",
+    "offset": "30",
+    "size": "8",
+    "desc_short": "Device Context Base Address Array Pointer Register",
+    "desc_long": "The Device Context Base Address Array Pointer Register identifies the base address of the Device\nContext Base Address Array.\nThe memory structure referenced by this physical memory pointer is assumed to be physically contiguous\nand 64-byte aligned.",
+    "fields": [
+      {
+        "bits": [
+          6,
+          31
+        ],
+        "name": "Device Context Base Address Array Pointer Lo",
+        "meaning": "Device Context Base Address Array Pointer Low"
+      },
+      {
+        "bits": [
+          32,
+          63
+        ],
+        "name": "Device Context Base Address Array Pointer Hi",
+        "meaning": "Device Context Base Address Array Pointer High"
+      }
+    ]
+  },
+  {
+    "name": "DNCTRL",
+    "parent": "/XHCI/Operational/",
+    "offset": "14",
+    "size": "4",
+    "desc_short": "Device Notification Control Register",
+    "desc_long": "This register is used by software to enable or disable the reporting of the reception of specific USB Device\nNotification Transaction Packets. A Notification Enable (Nx, where x = 0 to 15) flag is defined for each of\nthe 16 possible device notification types. If a flag is set for a specific notification type, a Device Notification\nEvent shall be generated when the respective notification packet is received. After reset all notifications\nare disabled. Refer to section 6.4.2.7.\nThis register shall be written as a Dword. Byte writes produce undefined results.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          15
+        ],
+        "name": "NE",
+        "meaning": "Notification Enable Bitmap"
+      }
+    ]
+  },
+  {
+    "name": "PAGESIZE",
+    "parent": "/XHCI/Operational/",
+    "offset": "8",
+    "size": "4",
+    "desc_short": "Page Size Register",
+    "desc_long": "Page Size Register",
+    "fields": [
+      {
+        "bits": [
+          0,
+          15
+        ],
+        "name": "Page Size",
+        "meaning": "This field defines the page size supported by\nthe xHC implementation. This xHC supports a page size of 2^(n+12) if bit n is Set. For example,\nif bit 0 is Set, the xHC supports 4k byte page sizes."
+      }
+    ]
+  },
+  {
+    "name": "PORTHLPMC Set/",
+    "parent": "/XHCI/Operational/",
+    "offset": "40c"
+  },
+  {
+    "name": "PORTHLPMC2",
+    "parent": "/XHCI/Operational/PORTHLPMC Set/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Port Hardware LPM Control Register (USB2 Protocol)",
+    "desc_long": "The optional normative USB2 Port Hardware LPM Control register provides the USB2 LPM parameters\nnecessary for the xHC to automatically generate a LPM Token to the downstream device. If LPM is not\nsupported (HLC = '0') then this register is reserved. ",
+    "fields": [
+      {
+        "bits": [
+          0,
+          1
+        ],
+        "name": "HIRDM",
+        "meaning": "Host Initiated Resume Duration Mode"
+      },
+      {
+        "bits": [
+          2,
+          9
+        ],
+        "name": "L1 Timeout",
+        "meaning": "L1 Timeout"
+      },
+      {
+        "bits": [
+          10,
+          13
+        ],
+        "name": "BESLD",
+        "meaning": "Best Effort Service Latency Deep"
+      }
+    ]
+  },
+  {
+    "name": "PORTHLPMC3",
+    "parent": "/XHCI/Operational/PORTHLPMC Set/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Port Hardware LPM Control Register (USB3 Protocol)",
+    "desc_long": "The USB3 Port Hardware LPM Control register is reserved and shall be treated as RsvdP by software.",
+    "fields": []
+  },
+  {
+    "name": "PORTLI Set/",
+    "parent": "/XHCI/Operational/",
+    "offset": "408"
+  },
+  {
+    "name": "PORTLI2",
+    "parent": "/XHCI/Operational/PORTLI Set/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Port Link Info Register (USB2 Protocol)",
+    "desc_long": "The USB2 Port Link Info register is reserved and shall be treated as RsvdP by software",
+    "fields": []
+  },
+  {
+    "name": "PORTLI3",
+    "parent": "/XHCI/Operational/PORTLI Set/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Port Link Info Register (USB3 Protocol)",
+    "desc_long": "The USB3 Port Link Info register reports the Link Error Count.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          15
+        ],
+        "name": "Link Error Count",
+        "meaning": "Link Error Count"
+      },
+      {
+        "bits": [
+          16,
+          19
+        ],
+        "name": "RLC",
+        "meaning": "Rx Lane Count "
+      },
+      {
+        "bits": [
+          20,
+          23
+        ],
+        "name": "TLC",
+        "meaning": "Tx Lane Count"
+      }
+    ]
+  },
+  {
+    "name": "PORTPMSC Set/",
+    "parent": "/XHCI/Operational/",
+    "offset": "404"
+  },
+  {
+    "name": "PORTPMSC2",
+    "parent": "/XHCI/Operational/PORTPMSC Set/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Port PM Status and Control Register (USB2 Protocol)",
+    "desc_long": "The USB2 Port Power Management Status and Control register provides the USB2 LPM parameters\nnecessary for the xHC to generate a LPM Token to the downstream device.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          2
+        ],
+        "name": "L1S",
+        "meaning": "L1 Status"
+      },
+      {
+        "bits": [
+          3,
+          3
+        ],
+        "name": "RWE",
+        "meaning": "Remote Wake Enable"
+      },
+      {
+        "bits": [
+          4,
+          7
+        ],
+        "name": "BESL",
+        "meaning": "Best Effort Service Latency"
+      },
+      {
+        "bits": [
+          8,
+          15
+        ],
+        "name": "L1 Device Slot",
+        "meaning": "L1 Device Slot"
+      },
+      {
+        "bits": [
+          16,
+          16
+        ],
+        "name": "HLE",
+        "meaning": "Hardware LPM Enable"
+      },
+      {
+        "bits": [
+          28,
+          31
+        ],
+        "name": "Test Mode",
+        "meaning": "Port Test Control"
+      }
+    ]
+  },
+  {
+    "name": "PORTPMSC3",
+    "parent": "/XHCI/Operational/PORTPMSC Set/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Port PM Status and Control Register (USB3 Protocol)",
+    "desc_long": "The USB3 Port Power Management Status and Control register controls the SuperSpeed USB link U-State\ntimeouts.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          7
+        ],
+        "name": "U1 Timeout ",
+        "meaning": "U1 Timeout "
+      },
+      {
+        "bits": [
+          8,
+          15
+        ],
+        "name": "U2 Timeout",
+        "meaning": "U2 Timeout"
+      },
+      {
+        "bits": [
+          16,
+          16
+        ],
+        "name": "FLA",
+        "meaning": "Force Link PM Accept"
+      }
+    ]
+  },
+  {
+    "name": "PORTSC Set/",
+    "parent": "/XHCI/Operational/",
+    "offset": "400"
+  },
+  {
+    "name": "PORTSC",
+    "parent": "/XHCI/Operational/PORTSC Set/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Port Status and Control Register ",
+    "desc_long": "A host controller shall implement one or more port registers. The number of port registers implemented by\na particular instantiation of a host controller is documented in the HCSPARAMS1 register (Section 5.3.3).\nSoftware uses this information as an input parameter to determine how many ports need to be serviced. All\nports have the structure defined below.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          0
+        ],
+        "name": "CCS",
+        "meaning": "Current Connect Status "
+      },
+      {
+        "bits": [
+          1,
+          1
+        ],
+        "name": "PED",
+        "meaning": "Port Enabled/Disabled"
+      },
+      {
+        "bits": [
+          3,
+          3
+        ],
+        "name": "OCA",
+        "meaning": "Over-current Active"
+      },
+      {
+        "bits": [
+          4,
+          4
+        ],
+        "name": "PR",
+        "meaning": "Port Reset "
+      },
+      {
+        "bits": [
+          5,
+          8
+        ],
+        "name": "PLS",
+        "meaning": "Port Link State"
+      },
+      {
+        "bits": [
+          9,
+          9
+        ],
+        "name": "PP",
+        "meaning": "Port Power"
+      },
+      {
+        "bits": [
+          10,
+          13
+        ],
+        "name": "Port Speed",
+        "meaning": "Port Speed"
+      },
+      {
+        "bits": [
+          14,
+          15
+        ],
+        "name": "PIC",
+        "meaning": "Port Indicator Control"
+      },
+      {
+        "bits": [
+          16,
+          16
+        ],
+        "name": "LWS",
+        "meaning": "Port Link State Write Strobe"
+      },
+      {
+        "bits": [
+          17,
+          17
+        ],
+        "name": "CSC",
+        "meaning": "Connect Status Change"
+      },
+      {
+        "bits": [
+          18,
+          18
+        ],
+        "name": "PEC",
+        "meaning": "Port Enabled/Disabled Change"
+      },
+      {
+        "bits": [
+          19,
+          19
+        ],
+        "name": "WRC",
+        "meaning": "Warm Port Reset Change"
+      },
+      {
+        "bits": [
+          20,
+          20
+        ],
+        "name": "OCC",
+        "meaning": "Over-current Change"
+      },
+      {
+        "bits": [
+          21,
+          21
+        ],
+        "name": "PRC",
+        "meaning": "Port Reset Change"
+      },
+      {
+        "bits": [
+          22,
+          22
+        ],
+        "name": "PLC",
+        "meaning": "Port Link State Change"
+      },
+      {
+        "bits": [
+          23,
+          23
+        ],
+        "name": "CEC",
+        "meaning": "Port Config Error Change"
+      },
+      {
+        "bits": [
+          24,
+          24
+        ],
+        "name": "CAS",
+        "meaning": " Cold Attach Status"
+      },
+      {
+        "bits": [
+          25,
+          25
+        ],
+        "name": "WCE",
+        "meaning": "Wake on Connect Enable"
+      },
+      {
+        "bits": [
+          26,
+          26
+        ],
+        "name": "WDE",
+        "meaning": "Wake on Disconnect Enable"
+      },
+      {
+        "bits": [
+          27,
+          27
+        ],
+        "name": "WOE",
+        "meaning": "Wake on Over-current Enable"
+      },
+      {
+        "bits": [
+          30,
+          30
+        ],
+        "name": "DR",
+        "meaning": "Device Removable"
+      },
+      {
+        "bits": [
+          31,
+          31
+        ],
+        "name": "WPR",
+        "meaning": "Warm Port Reset"
+      }
+    ]
+  },
+  {
+    "name": "USBCMD",
+    "parent": "/XHCI/Operational/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "USB Command Register ",
+    "desc_long": "The Command Register indicates the command to be executed by the serial bus host controller. Writing to\nthe register causes a command to be executed.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          0
+        ],
+        "name": "R/S",
+        "meaning": "Run/Stop "
+      },
+      {
+        "bits": [
+          1,
+          1
+        ],
+        "name": "HCRST",
+        "meaning": "Host Controller Reset "
+      },
+      {
+        "bits": [
+          2,
+          2
+        ],
+        "name": "INTE",
+        "meaning": "Interrupter Enable "
+      },
+      {
+        "bits": [
+          3,
+          3
+        ],
+        "name": "HSEE",
+        "meaning": "Host System Error Enable"
+      },
+      {
+        "bits": [
+          7,
+          7
+        ],
+        "name": "LHCRST",
+        "meaning": "Light Host Controller Reset"
+      },
+      {
+        "bits": [
+          8,
+          8
+        ],
+        "name": "CSS",
+        "meaning": "Controller Save State"
+      },
+      {
+        "bits": [
+          9,
+          9
+        ],
+        "name": "CRS",
+        "meaning": "Controller Restore State "
+      },
+      {
+        "bits": [
+          10,
+          10
+        ],
+        "name": "EWE",
+        "meaning": "Enable Wrap Event"
+      },
+      {
+        "bits": [
+          11,
+          11
+        ],
+        "name": "EU3S",
+        "meaning": "Enable U3 MFINDEX Stop"
+      },
+      {
+        "bits": [
+          12,
+          12
+        ],
+        "name": "SPE",
+        "meaning": "Stopped - Short Packet Enable"
+      },
+      {
+        "bits": [
+          13,
+          13
+        ],
+        "name": "CME",
+        "meaning": "CEM Enable"
+      }
+    ]
+  },
+  {
+    "name": "USBSTS",
+    "parent": "/XHCI/Operational/",
+    "offset": "4",
+    "size": "4",
+    "desc_short": "USB Status Register ",
+    "desc_long": "This register indicates pending interrupts and various states of the Host Controller. The status resulting\nfrom a transaction on the serial bus is not indicated in this register. Software sets a bit to ‘0’ in this register\nby writing a ‘1’ to it (RW1C). Refer to Section 4.17 for additional information concerning USB interrupt\nconditions.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          0
+        ],
+        "name": "HCH",
+        "meaning": "HCHalted "
+      },
+      {
+        "bits": [
+          2,
+          2
+        ],
+        "name": "HSE",
+        "meaning": "Host System Error"
+      },
+      {
+        "bits": [
+          3,
+          3
+        ],
+        "name": "EINT",
+        "meaning": "Event Interrupt"
+      },
+      {
+        "bits": [
+          4,
+          4
+        ],
+        "name": "PCD",
+        "meaning": "Port Change Detect"
+      },
+      {
+        "bits": [
+          8,
+          8
+        ],
+        "name": "SSS",
+        "meaning": "Save State Status"
+      },
+      {
+        "bits": [
+          9,
+          9
+        ],
+        "name": "RSS",
+        "meaning": "Restore State Status"
+      },
+      {
+        "bits": [
+          10,
+          10
+        ],
+        "name": "SRE",
+        "meaning": "Save/Restore Error"
+      },
+      {
+        "bits": [
+          11,
+          11
+        ],
+        "name": "CNR",
+        "meaning": "Controller Not Ready"
+      },
+      {
+        "bits": [
+          12,
+          12
+        ],
+        "name": "HCE",
+        "meaning": "Host Controller Error"
+      }
+    ]
+  },
+  {
+    "name": "Runtime/",
+    "parent": "/XHCI/",
+    "offset": "0"
+  },
+  {
+    "name": "Interrupter Register Set/",
+    "parent": "/XHCI/Runtime/",
+    "offset": "20"
+  },
+  {
+    "name": "ERDP",
+    "parent": "/XHCI/Runtime/Interrupter Register Set/",
+    "offset": "18",
+    "size": "8",
+    "desc_short": "Event Ring Dequeue Pointer Register",
+    "desc_long": "The Event Ring Dequeue Pointer Register is written by software to define the Event Ring Dequeue Pointer\nlocation to the xHC. Software updates this pointer when it is finished the evaluation of an Event(s) on the\nEvent Ring.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          2
+        ],
+        "name": "DESI",
+        "meaning": "Dequeue ERST Segment Index"
+      },
+      {
+        "bits": [
+          3,
+          3
+        ],
+        "name": "EHB",
+        "meaning": "Event Handler Busy"
+      },
+      {
+        "bits": [
+          4,
+          63
+        ],
+        "name": "Event Ring Dequeue Pointer",
+        "meaning": "Event Ring Dequeue Pointer"
+      }
+    ]
+  },
+  {
+    "name": "ERSTBA",
+    "parent": "/XHCI/Runtime/Interrupter Register Set/",
+    "offset": "10",
+    "size": "8",
+    "desc_short": "Event Ring Segment Table Base Address Register",
+    "desc_long": "The Event Ring Segment Table Base Address Register identifies the start address of the Event Ring\nSegment Table.",
+    "fields": [
+      {
+        "bits": [
+          6,
+          63
+        ],
+        "name": "Event Ring Segment Table Base Address Register",
+        "meaning": "Event Ring Segment Table Base Address Register"
+      }
+    ]
+  },
+  {
+    "name": "ERSTSZ",
+    "parent": "/XHCI/Runtime/Interrupter Register Set/",
+    "offset": "8",
+    "size": "4",
+    "desc_short": "Event Ring Segment Table Size Register ",
+    "desc_long": "The Event Ring Segment Table Size Register defines the number of segments supported by the Event\nRing Segment Table.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          15
+        ],
+        "name": "Event Ring Segment Table Size ",
+        "meaning": "Event Ring Segment Table Size "
+      }
+    ]
+  },
+  {
+    "name": "IMAN",
+    "parent": "/XHCI/Runtime/Interrupter Register Set/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Interrupter Management Register",
+    "desc_long": "The Interrupter Management register allows system software to enable, disable, and detect xHC interrupts.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          0
+        ],
+        "name": "IP",
+        "meaning": "Interrupt Pending"
+      },
+      {
+        "bits": [
+          1,
+          1
+        ],
+        "name": "IE",
+        "meaning": "Interrupt Enable "
+      }
+    ]
+  },
+  {
+    "name": "IMOD",
+    "parent": "/XHCI/Runtime/Interrupter Register Set/",
+    "offset": "4",
+    "size": "4",
+    "desc_short": "Interrupter Moderation Register",
+    "desc_long": "The Interrupter Moderation Register controls the “interrupt moderation” feature of an Interrupter, allowing\nsystem software to throttle the interrupt rate generated by the xHC.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          15
+        ],
+        "name": "IMODI",
+        "meaning": "Interrupt Moderation Interval"
+      },
+      {
+        "bits": [
+          16,
+          31
+        ],
+        "name": "IMODC",
+        "meaning": "Interrupt Moderation Counter"
+      }
+    ]
+  },
+  {
+    "name": "MFINDEX",
+    "parent": "/XHCI/Runtime/",
+    "offset": "0",
+    "size": "4",
+    "desc_short": "Microframe Index Register",
+    "desc_long": "This register is used by the system software to determine the current periodic frame. The register value is\nincremented every 125 microseconds (once each microframe).\nThis register is only incremented while Run/Stop (R/S) = ‘1’.\nThe value of this register affects the SOF value generated by USB2 Bus Instances. Refer to section 4.14.2\nfor details. Also see Figure 29.",
+    "fields": [
+      {
+        "bits": [
+          0,
+          13
+        ],
+        "name": "Microframe Index ",
+        "meaning": "Microframe Index "
+      }
+    ]
+  }
 ]
