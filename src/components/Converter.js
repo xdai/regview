@@ -59,7 +59,25 @@ let convertToMacro = (data) => {
 }
 
 let convertToTemplate = (data) => {
-    let result = '#include "RegisterCommon.h"\n';
+    let result = '';
+
+    // Copyright
+    result += "/*--------------------------------------------------------------------------------*\n";
+    result += "  Copyright (C)Nintendo All rights reserved.\n";
+    result += "\n";
+    result += "  These coded instructions, statements, and computer programs contain proprietary\n";
+    result += "  information of Nintendo and/or its licensed developers and are protected by\n";
+    result += "  national and international copyright laws. They may not be disclosed to third\n";
+    result += "  parties or copied or duplicated in any form, in whole or in part, without the\n";
+    result += "  prior written consent of Nintendo.\n";
+    result += "\n";
+    result += "  The content herein is highly confidential and should be handled accordingly.\n";
+    result += " *--------------------------------------------------------------------------------*/\n";
+
+    // Nolint
+    result += "\n";
+    result += "// NOLINT(build/header_guard)\n";
+    result += "\n";
 
     let getLevel = (parentName) => {
         try {
@@ -92,7 +110,7 @@ let convertToTemplate = (data) => {
 
     result += `class ${rootClassName} {\n`;
     result += `public:\n`;
-    result += `    const static uintptr_t g_Address = 0;\n`;
+    result += `    static const uintptr_t g_Address = 0;\n`;
     result += `\n`;
     result += `private:\n`;
     data['/'].children.forEach((child) => {
@@ -141,8 +159,8 @@ let convertToTemplate = (data) => {
         result += `public:\n`;
         result += `    typedef ${enclosingName} ParentType;\n`;
         result += `    typedef ${baseClassName} BaseType;\n`;
-        result += `    const static uintptr_t g_Offset = 0x${node.offset};\n`;
-        result += `    const static uintptr_t g_Address = ParentType::g_Address + g_Offset;\n`;
+        result += `    static const uintptr_t g_Offset = 0x${node.offset};\n`;
+        result += `    static const uintptr_t g_Address = ParentType::g_Address + g_Offset;\n`;
         
         result += `\n`;
         result += `private:\n`;
@@ -152,7 +170,7 @@ let convertToTemplate = (data) => {
         
         result += `\n`;
         result += `public:\n`;
-        result += `    ${className}(uintptr_t n)\n`;
+        result += `    explicit ${className}(uintptr_t n)\n`;
         result += `        : BaseType(n)\n`;
         result += `    {\n`;
         result += `    }\n`;
@@ -164,25 +182,25 @@ let convertToTemplate = (data) => {
             result += `     */\n`;
             result += `\n`;
             result += `    template <template<uintptr_t> class AddressPolicy = Fixed>\n`;
-            result += `    ${getClasslName(child)}<AddressPolicy> ${getFactoryName(child)}();\n`;
+            result += `    ${getClasslName(child)}<AddressPolicy> ${getFactoryName(child)}() const ;\n`;
             result += `\n`;
             result += `    template <template<uintptr_t> class AddressPolicy>\n`;
-            result += `    ${getClasslName(child)}<AddressPolicy> ${getFactoryName(child)}(uintptr_t n);\n`;
+            result += `    ${getClasslName(child)}<AddressPolicy> ${getFactoryName(child)}(uintptr_t n) const;\n`;
             result += `\n`;
             result += `    template <>\n`;
-            result += `    ${getClasslName(child)}<Fixed> ${getFactoryName(child)}()\n`;
+            result += `    ${getClasslName(child)}<Fixed> ${getFactoryName(child)}() const\n`;
             result += `    {\n`;
             result += `        return ${getClasslName(child)}<Fixed>(this->GetAddress() - g_Address);\n`
             result += `    }\n`;
             result += `\n`;
             result += `    template <>\n`;
-            result += `    ${getClasslName(child)}<At> ${getFactoryName(child)}(uintptr_t address)\n`;
+            result += `    ${getClasslName(child)}<At> ${getFactoryName(child)}(uintptr_t address) const\n`;
             result += `    {\n`;
             result += `        return ${getClasslName(child)}<At>(address);\n`
             result += `    }\n`;
             result += `\n`;
             result += `    template <>\n`;
-            result += `    ${getClasslName(child)}<Offset> ${getFactoryName(child)}(uintptr_t offset)\n`;
+            result += `    ${getClasslName(child)}<Offset> ${getFactoryName(child)}(uintptr_t offset) const\n`;
             result += `    {\n`;
             result += `        return ${getClasslName(child)}<Offset>(this->GetAddress() - g_Address + offset);\n`
             result += `    }\n`;
@@ -213,21 +231,21 @@ let convertToTemplate = (data) => {
         result += `    typedef ${enclosingName} ParentType;\n`;
         result += `    typedef ${baseClassName} BaseType;\n`;
         result += `\n`;
-        result += `    const static uintptr_t g_Offset = 0x${node.offset};\n`;
-        result += `    const static uintptr_t g_Address = ParentType::g_Address + g_Offset;\n`;
-        result += `    const static size_t    g_Size = ${node.size};\n`;
+        result += `    static const uintptr_t g_Offset = 0x${node.offset};\n`;
+        result += `    static const uintptr_t g_Address = ParentType::g_Address + g_Offset;\n`;
+        result += `    static const size_t    g_Size = ${node.size};\n`;
         result += `\n`;
         result += `    typedef typename BaseTypeOfLength<g_Size>::value ValueType;\n`;
         result += `\n`;
         result += `    class Data;\n`;
         result += `\n`;
         result += `public:\n`;
-        result += `    ${className}(uintptr_t n)\n`;
+        result += `    explicit ${className}(uintptr_t n)\n`;
         result += `        : BaseType(n)\n`;
         result += `    {\n`;
         result += `    }\n`;
         result += `\n`;
-        result += `    Data Get()\n`;
+        result += `    Data Get() const\n`;
         result += `    {\n`;
         result += `        return Data(\n`;
         result += `            *reinterpret_cast<volatile ValueType*>(this->GetAddress())\n`;
