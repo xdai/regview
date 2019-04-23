@@ -6,6 +6,10 @@ let siglofyName = (name) => {
     ).join('');
 }
 
+let classifyName = (name) => {
+    return siglofyName(name) + 'Type';
+}
+
 let forEachNode = (data, rootKey, func) => {
     const root = data[rootKey];
     func(root.node, root.address, root.children);
@@ -60,6 +64,9 @@ let convertToMacro = (data) => {
 
 let convertToTemplate = (data) => {
     let result = '';
+    
+    // BOM
+    // result += '\357\273\277';
 
     // Copyright
     result += "/*--------------------------------------------------------------------------------*\n";
@@ -235,7 +242,7 @@ let convertToTemplate = (data) => {
         result += `    static const uintptr_t g_Address = ParentType::g_Address + g_Offset;\n`;
         result += `    static const size_t    g_Size = ${node.size};\n`;
         result += `\n`;
-        result += `    typedef typename BaseTypeOfLength<g_Size>::value ValueType;\n`;
+        result += `    typedef typename BaseTypeOfBytes<g_Size>::value ValueType;\n`;
         result += `\n`;
         result += `    class Data;\n`;
         result += `\n`;
@@ -271,12 +278,12 @@ let convertToTemplate = (data) => {
         });
         result += `\n`;
         result += `public:\n`;
-        result += `    Data(ValueType value)\n`;
+        result += `    explicit Data(ValueType value)\n`;
         result += `        : m_Value(value)\n`;
         result += `    {\n`;
         result += `    }\n`;
         result += `\n`;
-        result += `    operator ValueType() const\n`;
+        result += `    NN_IMPLICIT operator ValueType() const\n`;
         result += `    {\n`;
         result += `        return m_Value;\n`;
         result += `    }\n`;
@@ -323,6 +330,344 @@ let convertToTemplate = (data) => {
     return result;
 }
 
+let convertToCpp = (data) => {
+    let result = '';
+    
+    // BOM
+    // result += '\357\273\277';
+
+    // Copyright
+    result += "/*--------------------------------------------------------------------------------*\n";
+    result += "  Copyright (C)Nintendo All rights reserved.\n";
+    result += "\n";
+    result += "  These coded instructions, statements, and computer programs contain proprietary\n";
+    result += "  information of Nintendo and/or its licensed developers and are protected by\n";
+    result += "  national and international copyright laws. They may not be disclosed to third\n";
+    result += "  parties or copied or duplicated in any form, in whole or in part, without the\n";
+    result += "  prior written consent of Nintendo.\n";
+    result += "\n";
+    result += "  The content herein is highly confidential and should be handled accordingly.\n";
+    result += " *--------------------------------------------------------------------------------*/\n";
+
+    // Nolint
+    result += "\n";
+    result += "// NOLINT(build/header_guard)\n";
+
+    let getFactoryName = (path) => {
+        return siglofyName(splitKey(path)[1]);
+
+    };
+
+    let getClasslName = (path) => {
+        const segs = path.split('/').filter(s => s !== '');
+        if (segs.length === 0) {
+            return 'Register';
+        } else {
+            return classifyName(segs[segs.length - 1]);
+        }
+    };
+
+    let getClasslNameLong = (path) => {
+        return ['Register'].concat(path.split('/').filter(s => s !== '').map((s) => classifyName(s))).join('::');
+    };
+
+    result += `\n`;
+    result += `class At;\n`;
+    result += `class Offset;\n`;
+    const rootClassName = 'Register';
+
+    //////////////////////////////////////////////////////////
+    // Declarations
+    //////////////////////////////////////////////////////////
+    
+    result += `\n`;
+    result += `class ${rootClassName} {\n`;
+    result += `public:\n`;
+    result += `    static const uintptr_t g_DeclareAddress = 0;\n`;
+    result += `    static const uintptr_t g_RuntimeAddress = 0;\n`;
+    result += `\n`;
+    data['/'].children.forEach((path) => {
+        result += `    class ${getClasslName(path)};\n`;
+    });
+    result += `\n`;
+    result += `private:\n`;
+    result += `    template <size_t N>\n`;
+    result += `    struct  BaseTypeOfBytes_;\n`;
+    result += `\n`;
+    result += `    template <>\n`;
+    result += `    struct BaseTypeOfBytes_<1> {\n`;
+    result += `        typedef uint8_t value;\n`;
+    result += `    };\n`;
+    result += `\n`;
+    result += `    template <>\n`;
+    result += `    struct BaseTypeOfBytes_<2> {\n`;
+    result += `        typedef uint16_t value;\n`;
+    result += `    };\n`;
+    result += `\n`;
+    result += `    template <>\n`;
+    result += `    struct BaseTypeOfBytes_<4> {\n`;
+    result += `        typedef uint32_t value;\n`;
+    result += `    };\n`;
+    result += `\n`;
+    result += `    template <>\n`;
+    result += `    struct BaseTypeOfBytes_<8> {\n`;
+    result += `        typedef uint64_t value;\n`;
+    result += `    };\n`;
+    result += `\n`;
+    result += `    static constexpr size_t CeilP2Helper_(size_t n, size_t shift) {\n`;
+    result += `        return (n & (n - 1)) ? CeilP2Helper_(n & (n - 1), 1) : (n << shift);\n`;
+    result += `    }\n`;
+    result += `\n`;
+    result += `    static constexpr size_t CeilP2_(size_t n) {\n`;
+    result += `        return n ? CeilP2Helper_(n, 0) : 0;\n`;
+    result += `    }\n`;
+    result += `\n`;
+    result += `    template <size_t N>\n`;
+    result += `    struct BaseTypeOfBits_ {\n`;
+    result += `        typedef typename BaseTypeOfBytes_<CeilP2_((N+7)/8)>::value value;\n`;
+    result += `    };\n`;
+    result += `\n`;
+    result += `    template <uint8_t L, uint8_t H, typename T>\n`
+	result += `    struct Field_ {\n`
+    result += `        static const uint8_t low   = L;\n`;
+    result += `        static const uint8_t high  = H;\n`;
+    result += `\n`;
+    result += `        NN_STATIC_ASSERT(low <= high);\n`;
+    result += `        NN_STATIC_ASSERT(high <= 64);\n`;
+    result += `\n`;
+    result += `        static const uint8_t shift = low;\n`;
+    result += `        static const uint8_t size  = high - low + 1;\n`;
+    result += `\n`;
+    result += `        static const T mask = ((1ull << size) - 1) << shift;\n`;
+    result += `\n`;
+    result += `        typedef typename BaseTypeOfBits_<size>::value ValueType;\n`
+    result += `    };\n`
+
+    result += `\n`;
+    result += `public:\n`;
+    data['/'].children.forEach((path) => {
+        result += `\n`;
+        result += `    /*\n`;
+        result += `     * Child: ${path}\n`;
+        result += `     */\n`;
+        result += `    static inline ${getClasslName(path)} ${getFactoryName(path)}() NN_NOEXCEPT;\n`;
+        result += `    template <typename AddressPolicy>\n`;
+        result += `    static inline ${getClasslName(path)} ${getFactoryName(path)}(uintptr_t) NN_NOEXCEPT;\n`;
+        
+    });
+    result += `};\n`;
+
+    forEachGroup(data, '/', (node, address, children) => {
+        if (!node.parent) {
+            return;
+        }
+
+        const className     = getClasslName(node.parent + node.name);
+        const enclosingName = getClasslNameLong(node.parent);
+
+        result += `\n`;
+        result += `/*\n`;
+        result += ` * ${node.parent  + node.name}\n`;
+        result += ` *   - Base:    0x${(address - parseInt(node.offset, 16)).toString(16)}\n`
+        result += ` *   - Offset:  0x${node.offset}\n`;
+        result += ` *   - Address: 0x${address.toString(16)}\n`;
+        result += ` */\n`;
+        result += `class ${enclosingName}::${className} {\n`;
+        result += `public:\n`;
+        result += `    static const uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
+        result += `    static const uintptr_t g_DeclareOffset  = 0x${node.offset};\n`;
+        result += `    static const uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
+        result += `\n`;
+        children.forEach((path) => {
+            result += `    class ${getClasslName(path)};\n`;
+        });
+        result += `\n`;
+        result += `private:\n`;
+        result += `    uintptr_t runtimeAddress;\n`;
+        result += `\n`;
+        result += `public:\n`;
+        result += `    explicit ${className}(uintptr_t n) NN_NOEXCEPT\n`;
+        result += `        : runtimeAddress(n)\n`;
+        result += `    {\n`;
+        result += `    }\n`;
+        result += `    ${className}() NN_NOEXCEPT\n`;
+        result += `        : runtimeAddress(g_DeclareAddress)\n`;
+        result += `    {\n`;
+        result += `    }\n`;
+        
+        children.forEach((path) => {
+            result += `\n`;
+            result += `    /*\n`;
+            result += `     * Child Factory: ${path}\n`;
+            result += `     */\n`;
+            result += `    inline ${getClasslName(path)} ${getFactoryName(path)}() const NN_NOEXCEPT;\n`;
+            result += `    template <typename AddressPolicy>\n`;
+            result += `    inline ${getClasslName(path)} ${getFactoryName(path)}(uintptr_t n) const NN_NOEXCEPT;\n`;
+        });
+        
+        result += `};\n`;
+    });
+
+    forEachRegister(data, '/', (node, address) => {
+        const className     = getClasslName(node.parent + node.name);
+        const enclosingName = getClasslNameLong(node.parent);
+
+        result += `\n`;
+        result += `/*\n`;
+        result += ` * ${node.parent + node.name}\n`;
+        result += ` *   - Base:    0x${(address - parseInt(node.offset, 16)).toString(16)}\n`
+        result += ` *   - Offset:  0x${node.offset}\n`;
+        result += ` *   - Address: 0x${address.toString(16)}\n`;
+        result += ` */\n`;
+
+        result += `class ${enclosingName}::${className} {\n`;
+        result += `public:\n`;
+        result += `    static const uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
+        result += `    static const uintptr_t g_DeclareOffset  = 0x${node.offset};\n`;
+        result += `    static const uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
+        result += `    static const size_t    g_Size           = ${node.size};\n`;
+        result += `\n`;
+        result += `    typedef typename BaseTypeOfBytes_<g_Size>::value ValueType_;\n`;
+        result += `\n`;
+        result += `private:\n`;
+        result += `    uintptr_t runtimeAddress;\n`;
+        result += `    class     Data_;\n`;
+        result += `\n`;
+        result += `public:\n`;
+        result += `    explicit ${className}(uintptr_t n) NN_NOEXCEPT\n`;
+        result += `        : runtimeAddress(n)\n`;
+        result += `    {\n`;
+        result += `    }\n`;
+        result += `    ${className}() NN_NOEXCEPT\n`;
+        result += `        : runtimeAddress(g_DeclareAddress)\n`;
+        result += `    {\n`;
+        result += `    }\n`;
+        result += `\n`;
+        result += `    inline Data_ Get() const NN_NOEXCEPT;\n`;
+        result += `    inline void  Set(ValueType_ value) NN_NOEXCEPT;\n`;
+        result += `};\n`;
+
+        result += `\n`;
+        result += `class ${enclosingName}::${className}::Data_ {\n`;
+        result += `private:\n`;
+        result += `    ValueType_ m_Value;\n`
+        result += `\n`;
+        node.fields.forEach((field) => {
+            result += `    typedef Field_<${field.bits[0]}, ${field.bits[1]}, ValueType_> ${classifyName(field.name)};\n`;
+        });
+        result += `\n`;
+        result += `public:\n`;
+        result += `    explicit Data_(ValueType_ value) NN_NOEXCEPT\n`;
+        result += `        : m_Value(value)\n`;
+        result += `    {\n`;
+        result += `    }\n`;
+        result += `\n`;
+        result += `    NN_IMPLICIT operator ValueType_() const NN_NOEXCEPT\n`;
+        result += `    {\n`;
+        result += `        return m_Value;\n`;
+        result += `    }\n`;
+        node.fields.forEach((field) => {
+            const fieldName = siglofyName(field.name);
+            const valueType = `${classifyName(field.name)}::ValueType`;
+            result += `\n`;
+            result += `    inline ${valueType} ${fieldName}() const NN_NOEXCEPT;\n`;
+            result += `    inline Data_& ${fieldName}(${valueType} value) NN_NOEXCEPT;\n`
+        });
+        result += `};\n`;
+    });
+
+    //////////////////////////////////////////////////////////
+    // Implementation
+    //////////////////////////////////////////////////////////
+
+    forEachGroup(data, '/', (node, address, children) => {
+        const runtimeAddress = node.parent ? 'runtimeAddress' : 'g_RuntimeAddress';
+        const constNess      = node.parent ? 'const' : '';
+        const enclosingName  = getClasslNameLong((node.parent || '') + node.name);
+
+        children.forEach((path) => {
+            const className     = getClasslName(path);
+            const classNameLong = getClasslNameLong(path);
+            const factoryName   = getFactoryName(path);
+
+            result += `\n`;
+            result += `/*\n`;
+            result += ` * ${path}: Factory methods\n`;
+            result += ` */\n`;
+            result += `\n`;
+            result += `inline ${classNameLong}\n`
+            result += `${enclosingName}::${factoryName}() ${constNess} NN_NOEXCEPT\n`;
+            result += `{\n`;
+            result += `    return ${className}(${runtimeAddress} + ${className}::g_DeclareOffset);\n`
+            result += `}\n`;
+            result += `\n`;
+            result += `template <>\n`;
+            result += `inline ${classNameLong}\n`
+            result += `${enclosingName}::${factoryName}<At>(uintptr_t address) ${constNess} NN_NOEXCEPT\n`;
+            result += `{\n`;
+            result += `    return ${className}(address);\n`
+            result += `}\n`;
+            result += `\n`;
+            result += `template <>\n`;
+            result += `inline ${classNameLong}\n`
+            result += `${enclosingName}::${factoryName}<Offset>(uintptr_t offset) ${constNess} NN_NOEXCEPT\n`;
+            result += `{\n`;
+            result += `    return ${className}(${runtimeAddress} + ${className}::g_DeclareOffset + offset);\n`
+            result += `}\n`;
+        });
+    });
+
+    forEachRegister(data, '/', (node, address) => {
+        const enclosingName  = getClasslNameLong(node.parent + node.name);
+        
+        result += `/*\n`;
+        result += ` * ${node.parent + node.name}: Getter\n`;
+        result += ` */\n`;
+        result += `inline ${enclosingName}::Data_\n`;
+        result += `${enclosingName}::Get() const NN_NOEXCEPT\n`;
+        result += `{\n`;
+        result += `    return Data_(*(volatile ValueType_*)runtimeAddress);\n`
+        result += `}\n`;
+        
+        result += `\n`;
+        result += `/*\n`;
+        result += ` * ${node.parent + node.name}: Setter\n`;
+        result += ` */\n`;
+        result += `inline void\n`;
+        result += `${enclosingName}::Set(ValueType_ value) NN_NOEXCEPT\n`;
+        result += `{\n`;
+        result += `    *(volatile ValueType_*)runtimeAddress = value;`
+        result += `}\n`;
+
+        node.fields.forEach((field) => {
+            const methodName = siglofyName(field.name);
+            const className  = classifyName(field.name);
+
+            result += `\n`;
+            result += `/*\n`;
+            result += ` * ${node.parent + node.name}: Field accessor\n`;
+            result += ` *   [${field.bits[0]}, ${field.bits[1]}]: ${field.name} - ${field.meaning}\n`;
+            result += ` */\n`;
+            result += `\n`;
+            result += `inline ${enclosingName}::Data_::${className}::ValueType\n`;
+            result += `${enclosingName}::Data_::${methodName}() const NN_NOEXCEPT\n`;
+            result += `{\n`;
+            result += `    return (m_Value & ${className}::mask) >> ${className}::shift;\n`;
+            result += `}\n`;
+            result += `\n`;
+            result += `inline ${enclosingName}::Data_&\n`;
+            result += `${enclosingName}::Data_::${methodName}(${className}::ValueType value) NN_NOEXCEPT\n`;
+            result += `{\n`;
+            result += `    m_Value &= ~${className}::mask;\n`;
+            result += `    m_Value |= (value << ${className}::shift) & ${className}::mask;\n`
+            result += `    return *this;\n`;
+            result += `}\n`;
+        });
+    });
+
+    return result;
+}
+
 export let convertTo = (data, format) => {
     const converter = {
         json: {
@@ -336,6 +681,10 @@ export let convertTo = (data, format) => {
         template: {
             handle: convertToTemplate,
             descripton: 'C++ Template'
+        },
+        'C++': {
+            handle: convertToCpp,
+            description: 'C++'
         }
     }[format];
 

@@ -36,7 +36,7 @@ class RegEditor extends Component {
 				parent: this.props.path,
 				offset: '0',
 				size: '4',
-				desc_short: '',
+				desc_short: 'N/A',
 				desc_long: '',
 				fields: [],
 				

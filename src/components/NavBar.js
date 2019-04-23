@@ -77,7 +77,7 @@ class NavBar extends Component {
 					<Deleter path={path}>Delete (recursively)</Deleter>
 					<Exporter path={path} format="json">Export as JSON...</Exporter>
 					<Exporter path={path} format="macro">Export as Macro...</Exporter>
-					<Exporter path={path} format="template">Export as Template...</Exporter>
+					<Exporter path={path} format="C++">Export as C++...</Exporter>
 				</Fragment>;
 		} else {
 			const [parent] = splitKey(path);
@@ -89,7 +89,7 @@ class NavBar extends Component {
 					<Deleter path={path}>Delete (recursively)</Deleter>
 					<Exporter path={path} format="json">Export as JSON...</Exporter>
 					<Exporter path={path} format="macro">Export as Macro...</Exporter>
-					<Exporter path={path} format="template">Export as Template...</Exporter>
+					<Exporter path={path} format="C++">Export as C++...</Exporter>
 				</Fragment>;
 		}
 
