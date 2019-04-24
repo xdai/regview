@@ -60,7 +60,7 @@ class GroupEditor extends Component {
 				}
 			},
 			'offset': value => {
-				if (value.match(/^[0-9a-f]+$/i)) {
+				if (value.match(/^(0x)?[0-9a-f]+$/i)) {
 					return [true];
 				} else if (value.match(/^\s*$/)) {
 					return [false, <li key="offset">Group offset: it cannot be empty.</li>]

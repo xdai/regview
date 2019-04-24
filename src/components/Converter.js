@@ -424,7 +424,7 @@ let convertToCpp = (data) => {
     result += `\n`;
     result += `    template <size_t N>\n`;
     result += `    struct BaseTypeOfBits_ {\n`;
-    result += `        typedef typename BaseTypeOfBytes_<CeilP2_((N+7)/8)>::value value;\n`;
+    result += `        typedef typename BaseTypeOfBytes_<CeilP2_((N + 7) / 8)>::value value;\n`;
     result += `    };\n`;
     result += `\n`;
     result += `    template <uint8_t L, uint8_t H, typename T>\n`
@@ -433,12 +433,13 @@ let convertToCpp = (data) => {
     result += `        static const uint8_t high  = H;\n`;
     result += `\n`;
     result += `        NN_STATIC_ASSERT(low <= high);\n`;
-    result += `        NN_STATIC_ASSERT(high <= 64);\n`;
+    result += `        NN_STATIC_ASSERT(std::is_integral<T>::value);\n`;
+    result += `        NN_STATIC_ASSERT(high < sizeof(T) * 8);\n`;
     result += `\n`;
     result += `        static const uint8_t shift = low;\n`;
     result += `        static const uint8_t size  = high - low + 1;\n`;
     result += `\n`;
-    result += `        static const T mask = ((1ull << size) - 1) << shift;\n`;
+    result += `        static const T mask = (size == sizeof(T) * 8) ? (~T{0}) : (((T{1} << size) - 1) << shift);\n`;
     result += `\n`;
     result += `        typedef typename BaseTypeOfBits_<size>::value ValueType;\n`
     result += `    };\n`
@@ -483,15 +484,15 @@ let convertToCpp = (data) => {
         });
         result += `\n`;
         result += `private:\n`;
-        result += `    uintptr_t runtimeAddress;\n`;
+        result += `    uintptr_t m_RuntimeAddress;\n`;
         result += `\n`;
         result += `public:\n`;
         result += `    explicit ${className}(uintptr_t n) NN_NOEXCEPT\n`;
-        result += `        : runtimeAddress(n)\n`;
+        result += `        : m_RuntimeAddress(n)\n`;
         result += `    {\n`;
         result += `    }\n`;
         result += `    ${className}() NN_NOEXCEPT\n`;
-        result += `        : runtimeAddress(g_DeclareAddress)\n`;
+        result += `        : m_RuntimeAddress(g_DeclareAddress)\n`;
         result += `    {\n`;
         result += `    }\n`;
         
@@ -530,16 +531,16 @@ let convertToCpp = (data) => {
         result += `    typedef typename BaseTypeOfBytes_<g_Size>::value ValueType_;\n`;
         result += `\n`;
         result += `private:\n`;
-        result += `    uintptr_t runtimeAddress;\n`;
+        result += `    uintptr_t m_RuntimeAddress;\n`;
         result += `    class     Data_;\n`;
         result += `\n`;
         result += `public:\n`;
         result += `    explicit ${className}(uintptr_t n) NN_NOEXCEPT\n`;
-        result += `        : runtimeAddress(n)\n`;
+        result += `        : m_RuntimeAddress(n)\n`;
         result += `    {\n`;
         result += `    }\n`;
         result += `    ${className}() NN_NOEXCEPT\n`;
-        result += `        : runtimeAddress(g_DeclareAddress)\n`;
+        result += `        : m_RuntimeAddress(g_DeclareAddress)\n`;
         result += `    {\n`;
         result += `    }\n`;
         result += `\n`;
@@ -581,7 +582,7 @@ let convertToCpp = (data) => {
     //////////////////////////////////////////////////////////
 
     forEachGroup(data, '/', (node, address, children) => {
-        const runtimeAddress = node.parent ? 'runtimeAddress' : 'g_RuntimeAddress';
+        const runtimeAddress = node.parent ? 'm_RuntimeAddress' : 'g_RuntimeAddress';
         const constNess      = node.parent ? 'const' : '';
         const enclosingName  = getClasslNameLong((node.parent || '') + node.name);
 
@@ -626,7 +627,7 @@ let convertToCpp = (data) => {
         result += `inline ${enclosingName}::Data_\n`;
         result += `${enclosingName}::Get() const NN_NOEXCEPT\n`;
         result += `{\n`;
-        result += `    return Data_(*(volatile ValueType_*)runtimeAddress);\n`
+        result += `    return Data_(*(volatile ValueType_*)m_RuntimeAddress);\n`
         result += `}\n`;
         
         result += `\n`;
@@ -636,7 +637,7 @@ let convertToCpp = (data) => {
         result += `inline void\n`;
         result += `${enclosingName}::Set(ValueType_ value) NN_NOEXCEPT\n`;
         result += `{\n`;
-        result += `    *(volatile ValueType_*)runtimeAddress = value;`
+        result += `    *(volatile ValueType_*)m_RuntimeAddress = value;\n`
         result += `}\n`;
 
         node.fields.forEach((field) => {

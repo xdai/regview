@@ -64,7 +64,7 @@ class RegEditor extends Component {
 				}
 			},
 			'offset': value => {
-				if (value.match(/^[0-9a-f]+$/i)) {
+				if (value.match(/^(0x)?[0-9a-f]+$/i)) {
 					return [true];
 				} else {
 					return [false, <li key="offset">Register offset: <Keyword>{value}</Keyword> is an invalid hex number</li>]

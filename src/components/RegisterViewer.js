@@ -48,11 +48,11 @@ class RegisterViewer extends Component {
 			}
 		}
 
-			this.setState({
-				decodeString: value,
-				decodeArray: segs.filter(s => re.test(s)).map(s => parseInt(s, 16)),
-				decodeError: error
-			})
+		this.setState({
+			decodeString: value,
+			decodeArray: segs.filter(s => re.test(s)).map(s => parseInt(s, 16)),
+			decodeError: error
+		})
 
 	}
 
@@ -204,7 +204,7 @@ class RegisterViewer extends Component {
 	getDecodeForm = () => {
 		return this.props.data.node.fields.length ? (
 			<form className="reg-decode">
-				<p>Decode comma seperated hex number:</p>
+				<p>Decode comma separated hex number:</p>
 				<textarea name="decodeString" onChange={this.decode} value={this.state.decodeString || ""} />
 				{ this.state.decodeError.length > 0 && <Warning>Invalid hex number:<ul>{this.state.decodeError}</ul></Warning>}
 			</form>
