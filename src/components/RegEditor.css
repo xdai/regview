@@ -92,3 +92,14 @@ div.bit.active-adding {
 div.bit.active-updating {
 	background-color: #ffb3ba;
 }
+
+table.symbolic-names {
+	table-layout: fixed;
+	border-collapse: collapse;
+	/*border: 3px solid purple;*/
+}
+
+table.symbolic-names th, table.symbolic-names td {
+	padding: 5px;
+	text-align: left;
+}

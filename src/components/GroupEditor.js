@@ -43,7 +43,11 @@ class GroupEditor extends Component {
 		const validator = {
 			'name': value => {
 				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
-					return [true];
+					if (value.toUpperCase() === this.props.data.node.name.slice(0, -1).toUpperCase()) {
+						return [false, <li key="name">Group name: <Keyword>{value}</Keyword> is the same as parent</li>];
+					} else {
+						return [true];
+					}
 				} else if (value.match(/^\s*$/)) {
 					return [false, <li key="name">Group name: it cannot be empty.</li>]
 				} else {

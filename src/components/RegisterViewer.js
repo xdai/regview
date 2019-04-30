@@ -174,18 +174,38 @@ class RegisterViewer extends Component {
 					</td>
 				);
 			});
+			let symbolics = null;
+			if (field.value && field.value.length) {
+				symbolics = 
+					<div className="symbolic-values">
+						{
+							field.value.map((v, i) => 
+								<Fragment key={i}>
+									<label>{v.value}</label>
+									<label>=</label>
+									<label>{v.name}</label>
+								</Fragment>
+							)
+						}
+					</div>
+			}
 			rows.push(
 				<tr key={field.bits[0]}>
 					<td>{field.name}</td>
 					<td>{field.bits[1]}:{field.bits[0]}</td>
-					<td>{field.meaning || "N/A"}</td>
+					<td>
+						{field.meaning || "N/A"}
+						{
+							symbolics
+						}
+					</td>
 					{values}
 				</tr>
 			);
 		})
 
 		return (
-			<table>
+			<table className="field-table">
 				<thead>
 					<tr>
 						<th>Name</th>

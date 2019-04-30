@@ -15,6 +15,8 @@ class RegEditor extends Component {
 	constructor(props) {
 		super(props);
 
+		console.log(props);
+
 		if (this.props.op === '/edit') {
 			const node = this.props.data.node;
 			this.state = {
@@ -51,16 +53,22 @@ class RegEditor extends Component {
 		const validator = {
 			'name': value => {
 				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
-					return [true];
+					if (value.toUpperCase() === this.props.data.node.name.slice(0, -1).toUpperCase()) {
+						return [false, <li key="name">Register name <Keyword>{value}</Keyword> is the same as parent</li>];
+					} else {
+						return [true];
+					}
+				} else if (value.match(/^\s*$/)) {
+					return [false, <li key="name">Register name cannot be empty.</li>]
 				} else {
-					return [false, <li key="name">Register name: <Keyword>{value}</Keyword> is an invalid name</li>];
+					return [false, <li key="name">Register name <Keyword>{value}</Keyword> is invalid</li>];
 				}
 			},
 			'parent': value => {
 				if (value.match(/^\/[/a-zA-Z0-9_ ]*$/)) {
 					return [true];
 				} else {
-					return [false, <li key="parent">Register group: <Keyword>{value}</Keyword> is an invalid parent name</li>];
+					return [false, <li key="parent"><Keyword>{value}</Keyword> is an invalid parent name</li>];
 				}
 			},
 			'offset': value => {
@@ -74,9 +82,9 @@ class RegEditor extends Component {
 				if (value.match(/^[1-9][0-9]*/) && parseInt(value, 10) <= MaxRegSize) {
 					return [true];
 				} else if (value.match(/^\s*$/)) {
-					return [false, <li key="size">Register size: it cannot be empty.</li>]
+					return [false, <li key="size">Register size cannot be empty.</li>]
 				} else {
-					return [false, <li key="size">Register size: <Keyword>{value}</Keyword> is an invalid size. It should be in range <Keyword>[1, {MaxRegSize}]</Keyword>.</li>]
+					return [false, <li key="size">Register size <Keyword>{value}</Keyword> is invalid. It should be in range <Keyword>[1, {MaxRegSize}]</Keyword>.</li>]
 				}
 			},
 			'desc_short': value => {
@@ -127,7 +135,8 @@ class RegEditor extends Component {
 
 	addField = (field) => {
 		this.setState((state) => ({
-			fields: [...state.fields, field].sort((a,b) => a.bits[0] - b.bits[0])
+			fields: [...state.fields, field].sort((a,b) => a.bits[0] - b.bits[0]),
+			error: undefined
 		}));
 	}
 
@@ -138,7 +147,8 @@ class RegEditor extends Component {
 			newFields[idx] = field;
 
 			return ({
-				fields: newFields.sort((a,b) => a.bits[0] - b.bits[0])
+				fields: newFields.sort((a,b) => a.bits[0] - b.bits[0]),
+				error: undefined
 			});
 		});
 	}
@@ -150,7 +160,8 @@ class RegEditor extends Component {
 			newFields.splice(idx, 1);
 
 			return ({
-				fields: newFields
+				fields: newFields,
+				error: undefined
 			});
 		});
 	}
@@ -162,6 +173,22 @@ class RegEditor extends Component {
 	}
 
 	commitChange = () => {
+		const error = this.validate(undefined);
+		if (error) {
+			this.setState({
+				error: error
+			});
+			return;
+		}
+
+		const idx = this.state.fields.findIndex(el => el.name.toUpperCase() === this.state.name.toUpperCase());
+		if (idx >= 0) {
+			this.setState({
+				error: <li>The name of the register is the same as one of its field</li>
+			});
+			return;
+		}
+		
 		const data = {
 			name: this.state.name,
 			parent: this.state.parent,
@@ -265,6 +292,10 @@ class RegEditor extends Component {
 			end: undefined,
 			field_name: undefined,
 			field_desc: undefined,
+			
+			field_value: [],
+			symbolic_name: undefined,
+			symbolic_value: undefined,
 
 			error: undefined
  		}
@@ -278,7 +309,11 @@ class RegEditor extends Component {
 			end: undefined,
 			field_name: undefined,
 			field_desc: undefined,
-
+			
+			field_value: [],
+			symbolic_name: undefined,
+			symbolic_value: undefined,
+			
 			error: undefined
 		});
 
@@ -415,7 +450,8 @@ class RegEditor extends Component {
  			begin: field.bits[0],
  			end: field.bits[1],
  			field_name: field.name,
- 			field_desc: field.meaning
+			field_desc: field.meaning,
+			field_value: field.value || []
 		});
 		 
 		this.props.onEditing(true);
@@ -425,6 +461,8 @@ class RegEditor extends Component {
 		const target = e.target;
 		const name = target.name;
 		const value = target.value;
+
+		console.log(target);
 
 		this.setState({
 			[name]: value,
@@ -437,7 +475,8 @@ class RegEditor extends Component {
  		this.props.addField({
  			bits: [this.state.begin, this.state.end].sort((a,b) => a - b),
  			name: this.state.field_name,
- 			meaning: this.state.field_desc
+			meaning: this.state.field_desc,
+			value: this.state.field_value
  		});
 
  		this.reset();
@@ -445,13 +484,26 @@ class RegEditor extends Component {
 	 
 	// when "update" button is clicked
  	onEndUpdating = () => {
- 		this.props.updateField(this.state.focus, {
- 			bits: [this.state.begin, this.state.end].sort((a,b) => a - b),
- 			name: this.state.field_name,
- 			meaning: this.state.field_desc
- 		});
+		const bits = [this.state.begin, this.state.end].sort((a,b) => a - b);
+		const width = bits[1] - bits[0] + 1;
+		const index = this.state.field_value.findIndex(el => el.value >= Math.pow(2, width));
+		
+		if (index >= 0) {
+			const name  = this.state.field_value[index].name;
+			const value = this.state.field_value[index].value;
+			this.setState({
+				error: <li><Keyword>{name}</Keyword>: value <Keyword>{value}</Keyword> out of range</li>
+			})
+		} else {
+			this.props.updateField(this.state.focus, {
+				bits: bits,
+				name: this.state.field_name,
+				meaning: this.state.field_desc,
+				value: this.state.field_value			 
+			});
 
- 		this.reset();
+			this.reset();
+		}
  	}
 
 	// when "cancel" button is clicked
@@ -463,8 +515,79 @@ class RegEditor extends Component {
  	onDeleteField = () => {
  		this.props.deleteField(this.state.focus);
 		 
-		 this.reset();
- 	}
+		this.reset();
+	}
+	 
+	onAddFieldValue = () => {
+		if (!this.state.symbolic_name) {
+			this.setState({
+				error: <li>Symbolic name is not specified</li>
+			});
+
+			return;
+		}
+
+		if (!this.state.symbolic_name.match(/^[a-zA-Z][a-zA-Z0-9_]*$/)) {
+			this.setState({
+				error: <li><Keyword>{this.state.symbolic_name}</Keyword> is not a valid symbolic name for field value</li>
+			});
+
+			return;
+		}
+
+		if (this.state.field_value.find((el) => el.name.toUpperCase() === this.state.symbolic_name.toUpperCase())) {
+			this.setState({
+				error: <li>Symbolic name <Keyword>{this.state.symbolic_name}</Keyword> already exist</li>
+			});
+
+			return;
+		}
+
+		if (!this.state.symbolic_value) {
+			this.setState({
+				error: <li>Value for the symbolic name <Keyword>{this.state.symbolic_name}</Keyword> is not specified</li>
+			});
+
+			return;
+		}
+		
+		if (!this.state.symbolic_value.match(/^ *[0-9]+ *$/)) {
+			this.setState({
+				error: <li><Keyword>{this.state.symbolic_value}</Keyword> is not a valid field value (i.e. decimal)</li>
+			});
+
+			return;
+		}
+
+		if (this.state.field_value.find((el) => el.value === this.state.symbolic_value)) {
+			this.setState({
+				error: <li><Keyword>{this.state.symbolic_value}</Keyword> already has a symbolic name</li>
+			});
+
+			return;
+		}
+		
+		this.setState(prevState => ({
+			field_value: [
+				...prevState.field_value,
+				{
+					name: prevState.symbolic_name,
+					value: prevState.symbolic_value
+				}
+			].sort((a, b) => a.value - b.value),
+			symbolic_name: undefined,
+			symbolic_value: undefined,
+
+			error: undefined
+		}))
+	}
+
+	onDeleteFieldValue = (idx) => {
+		this.setState(prevState => ({
+			field_value: [...prevState.field_value.slice(0, idx), ...prevState.field_value.slice(idx + 1)],
+			error: undefined
+		}));
+	}
 
  	forEachField = (action) => {
 		this.props.fields.forEach((field) => {
@@ -578,16 +701,15 @@ class RegEditor extends Component {
 			<button 
 				name="field-cancel-btn" 
 				onClick={this.onCancelEditing}>
-				Cancel
+				Cancel Editing
 			</button>;
 		
 		const deleteBtn = this.isUpdatingField() ?
 			<button 
 				name="field-delete-btn" 
 				onClick={this.onDeleteField}>
-				Delete
+				Delete Field
 			</button> : null;
-
 
 		if (this.isAddingField() || this.isUpdatingField()) {
 			form = 
@@ -597,6 +719,49 @@ class RegEditor extends Component {
 					
 					<label name="field-desc-label">Field Description:</label>
 					<textarea name="field_desc" onChange={this.onInputChange} value={this.state.field_desc || ""}/>
+
+					<label>Symbolic Values:</label>
+					<table className="symbolic-names">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Value</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							{
+								this.state.field_value.map((v, idx) =>
+									<tr key={idx}>
+										<td>{v.name}</td>
+										<td>{v.value}</td>
+										<td><button onClick={()=>this.onDeleteFieldValue(idx)}>Delete</button></td>
+									</tr>
+								)
+							}
+							<tr>
+								<td>
+									<input 
+										name="symbolic_name"  
+										type="text" 
+										onChange={this.onInputChange} 
+										value={this.state.symbolic_name || ""}
+									/>
+								</td>
+								<td>
+									<input 
+										name="symbolic_value" 
+										type="text" 
+										onChange={this.onInputChange} 
+										value={this.state.symbolic_value || ""}
+									/>
+								</td>
+								<td>
+									<button onClick={this.onAddFieldValue}>Add</button>
+								</td>
+							</tr>
+						</tbody>
+					</table>
 
 					<div className="field-btns">
 						{submitBtn}

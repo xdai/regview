@@ -374,6 +374,8 @@ let convertToCpp = (data) => {
         return ['Register'].concat(path.split('/').filter(s => s !== '').map((s) => classifyName(s))).join('::');
     };
 
+    let hasSymbolicValue = (field) => (field.value && field.value.length > 0);
+
     result += `\n`;
     result += `class At;\n`;
     result += `class Offset;\n`;
@@ -537,6 +539,21 @@ let convertToCpp = (data) => {
         result += `    uintptr_t m_RuntimeAddress;\n`;
         result += `    class     Data_;\n`;
         result += `\n`;
+        node.fields.forEach((field) => {
+            result += `    typedef Field_<${field.bits[0]}, ${field.bits[1]}, ValueType_> ${classifyName(field.name)};\n`;
+        });
+        result += `\n`;
+        result += `public:\n`;
+        node.fields.forEach((field) => {
+            if (hasSymbolicValue(field)) {
+                result += `    enum class ${siglofyName(field.name)}Value : ${classifyName(field.name)}::ValueType {\n`;
+                field.value.forEach(symbolic => {
+                    result += `        ${siglofyName(symbolic.name)} = ${symbolic.value},\n`;
+                });
+                result += `    };\n`;
+            }
+        });
+        result += `\n`;
         result += `public:\n`;
         result += `    explicit ${className}(uintptr_t n) NN_NOEXCEPT\n`;
         result += `        : m_RuntimeAddress(n)\n`;
@@ -556,10 +573,6 @@ let convertToCpp = (data) => {
         result += `private:\n`;
         result += `    ValueType_ m_Value;\n`
         result += `\n`;
-        node.fields.forEach((field) => {
-            result += `    typedef Field_<${field.bits[0]}, ${field.bits[1]}, ValueType_> ${classifyName(field.name)};\n`;
-        });
-        result += `\n`;
         result += `public:\n`;
         result += `    explicit Data_(ValueType_ value) NN_NOEXCEPT\n`;
         result += `        : m_Value(value)\n`;
@@ -572,7 +585,7 @@ let convertToCpp = (data) => {
         result += `    }\n`;
         node.fields.forEach((field) => {
             const fieldName = siglofyName(field.name);
-            const valueType = `${classifyName(field.name)}::ValueType`;
+            const valueType = hasSymbolicValue(field) ? `${siglofyName(field.name)}Value` : `${classifyName(field.name)}::ValueType`;
             result += `\n`;
             result += `    inline ${valueType} ${fieldName}() const NN_NOEXCEPT;\n`;
             result += `    inline Data_& ${fieldName}(${valueType} value) NN_NOEXCEPT;\n`
@@ -646,6 +659,7 @@ let convertToCpp = (data) => {
         node.fields.forEach((field) => {
             const methodName = siglofyName(field.name);
             const className  = classifyName(field.name);
+            const valueType = hasSymbolicValue(field) ? `${siglofyName(field.name)}Value` : `${className}::ValueType`;
 
             result += `\n`;
             result += `/*\n`;
@@ -653,17 +667,18 @@ let convertToCpp = (data) => {
             result += ` *   [${field.bits[0]}, ${field.bits[1]}]: ${field.name} - ${field.meaning}\n`;
             result += ` */\n`;
             result += `\n`;
-            result += `inline ${enclosingName}::Data_::${className}::ValueType\n`;
+            result += `inline ${enclosingName}::${valueType}\n`;
             result += `${enclosingName}::Data_::${methodName}() const NN_NOEXCEPT\n`;
             result += `{\n`;
-            result += `    return (m_Value & ${className}::mask) >> ${className}::shift;\n`;
+            result += `    ${className}::ValueType rv = (m_Value & ${className}::mask) >> ${className}::shift;\n`;
+            result += `    return ` + (hasSymbolicValue(field) ? `static_cast<${valueType}>(rv)`: `rv`) + `;\n`;
             result += `}\n`;
             result += `\n`;
             result += `inline ${enclosingName}::Data_&\n`;
-            result += `${enclosingName}::Data_::${methodName}(${className}::ValueType value) NN_NOEXCEPT\n`;
+            result += `${enclosingName}::Data_::${methodName}(${valueType} value) NN_NOEXCEPT\n`;
             result += `{\n`;
             result += `    m_Value &= ~${className}::mask;\n`;
-            result += `    m_Value |= (value << ${className}::shift) & ${className}::mask;\n`
+            result += `    m_Value |= (` + (hasSymbolicValue(field) ? `static_cast<${className}::ValueType>(value)` : `value`) + ` << ${className}::shift) & ${className}::mask;\n`
             result += `    return *this;\n`;
             result += `}\n`;
         });

@@ -163,9 +163,6 @@ div.block-header {
   margin: 10px 0;
 }
 
-div.block-header div.desc {
-}
-
 div.block-header:hover {
   cursor: pointer;
 }

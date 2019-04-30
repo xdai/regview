@@ -1,48 +1,51 @@
-table {
+table.field-table {
 	width: 800px;
 	margin: 50px auto;
 	overflow: hidden;
 	font-size: 90%;
+	border: 1px solid #ccc;
+	border-collapse: collapse;
+	text-align: left;
 }
 
-table, th, td {
+table.field-table th {
+	border: 1px solid #ccc;
+	border-collapse: collapse;
+	text-align: left;
+	padding: 5px;
+	background: #00cccc;
+	color: #fff;
+	position: relative;
+}
+
+table.field-table td {
   border: 1px solid #ccc;
   border-collapse: collapse;
   text-align: left;
+  padding: 5px;
+  position: relative;
 }
 
-th, td {
-	padding: 5px;
-}
-
-th {
-	background: #00cccc;
-	color: #fff;
-}
-
-th.focus-header {
+table.field-table th.focus-header {
 	background-color: orchid;
 }
 
-th.value-header {
+table.field-table th.value-header {
 	cursor: pointer;
 	background-color: cadetblue
 }
 
-td.highlight-field {
+table.field-table td.highlight-field {
 	background-color: orchid;
 	color: #fff;
 }
 
-tr:hover {
+table.field-table tr:hover {
 	background-color: #ffa;
 }
   
-td, th {
-	position: relative;
-}
-td:hover::after,
-th:hover::after {
+table.field-table td:hover::after,
+table.field-table th:hover::after {
 	content: "";
 	position: absolute;
 	background-color: #ffa;
@@ -57,4 +60,11 @@ th:hover::after {
 	width: 600px;
 	height: 120px;
 	padding: 5px;
+}
+
+div.symbolic-values {
+	padding: 5px 0 0 5px;
+	display: grid;
+	grid-template-columns: auto auto 1fr;
+	grid-column-gap: 5px;
 }
