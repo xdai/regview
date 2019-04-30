@@ -540,13 +540,13 @@ let convertToCpp = (data) => {
         result += `    class     Data_;\n`;
         result += `\n`;
         node.fields.forEach((field) => {
-            result += `    typedef Field_<${field.bits[0]}, ${field.bits[1]}, ValueType_> ${classifyName(field.name)};\n`;
+            result += `    typedef Field_<${field.bits[0]}, ${field.bits[1]}, ValueType_> ${classifyName(field.name)}_;\n`;
         });
         result += `\n`;
         result += `public:\n`;
         node.fields.forEach((field) => {
             if (hasSymbolicValue(field)) {
-                result += `    enum class ${siglofyName(field.name)}Value : ${classifyName(field.name)}::ValueType {\n`;
+                result += `    enum class ${siglofyName(field.name)}Value : ${classifyName(field.name)}_::ValueType {\n`;
                 field.value.forEach(symbolic => {
                     result += `        ${siglofyName(symbolic.name)} = ${symbolic.value},\n`;
                 });
@@ -585,7 +585,7 @@ let convertToCpp = (data) => {
         result += `    }\n`;
         node.fields.forEach((field) => {
             const fieldName = siglofyName(field.name);
-            const valueType = hasSymbolicValue(field) ? `${siglofyName(field.name)}Value` : `${classifyName(field.name)}::ValueType`;
+            const valueType = hasSymbolicValue(field) ? `${siglofyName(field.name)}Value` : `${classifyName(field.name)}_::ValueType`;
             result += `\n`;
             result += `    inline ${valueType} ${fieldName}() const NN_NOEXCEPT;\n`;
             result += `    inline Data_& ${fieldName}(${valueType} value) NN_NOEXCEPT;\n`
@@ -658,7 +658,7 @@ let convertToCpp = (data) => {
 
         node.fields.forEach((field) => {
             const methodName = siglofyName(field.name);
-            const className  = classifyName(field.name);
+            const className  = `${classifyName(field.name)}_`;
             const valueType = hasSymbolicValue(field) ? `${siglofyName(field.name)}Value` : `${className}::ValueType`;
 
             result += `\n`;
@@ -678,7 +678,7 @@ let convertToCpp = (data) => {
             result += `${enclosingName}::Data_::${methodName}(${valueType} value) NN_NOEXCEPT\n`;
             result += `{\n`;
             result += `    m_Value &= ~${className}::mask;\n`;
-            result += `    m_Value |= (` + (hasSymbolicValue(field) ? `static_cast<${className}::ValueType>(value)` : `value`) + ` << ${className}::shift) & ${className}::mask;\n`
+            result += `    m_Value |= (static_cast<ValueType_>(value) << ${className}::shift) & ${className}::mask;\n`
             result += `    return *this;\n`;
             result += `}\n`;
         });

@@ -181,14 +181,6 @@ class RegEditor extends Component {
 			return;
 		}
 
-		const idx = this.state.fields.findIndex(el => el.name.toUpperCase() === this.state.name.toUpperCase());
-		if (idx >= 0) {
-			this.setState({
-				error: <li>The name of the register is the same as one of its field</li>
-			});
-			return;
-		}
-		
 		const data = {
 			name: this.state.name,
 			parent: this.state.parent,
