@@ -15,8 +15,6 @@ class RegEditor extends Component {
 	constructor(props) {
 		super(props);
 
-		console.log(props);
-
 		if (this.props.op === '/edit') {
 			const node = this.props.data.node;
 			this.state = {
@@ -315,7 +313,7 @@ class RegEditor extends Component {
 	validate = (key, val) => {
 		const validator = {
 			'field_name': value => {
-				if (value.match(/^[a-zA-Z][a-zA-Z0-9_/ ]*$/)) {
+				if (!value || value.match(/^[a-zA-Z][a-zA-Z0-9_/ ]*$/)) {
 					return [true];
 				} else {
 					return [false, <li key="field_name"><Keyword>{value}</Keyword> is an invalid field name</li>];
