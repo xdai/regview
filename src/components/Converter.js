@@ -470,18 +470,19 @@ let convertToCpp = (data) => {
 
         const className     = getClasslName(node.parent + node.name);
         const enclosingName = getClasslNameLong(node.parent);
+        const offset = node.offset.match(/^0x/i) ? node.offset : `0x${node.offset}`;
 
         result += `\n`;
         result += `/*\n`;
         result += ` * ${node.parent  + node.name}\n`;
-        result += ` *   - Base:    0x${(address - parseInt(node.offset, 16)).toString(16)}\n`
-        result += ` *   - Offset:  0x${node.offset}\n`;
+        result += ` *   - Base:    0x${(address - parseInt(offset)).toString(16)}\n`
+        result += ` *   - Offset:  ${offset}\n`;
         result += ` *   - Address: 0x${address.toString(16)}\n`;
         result += ` */\n`;
         result += `class ${enclosingName}::${className} {\n`;
         result += `public:\n`;
         result += `    static const uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
-        result += `    static const uintptr_t g_DeclareOffset  = 0x${node.offset};\n`;
+        result += `    static const uintptr_t g_DeclareOffset  = ${offset};\n`;
         result += `    static const uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
         result += `\n`;
         children.forEach((path) => {
@@ -517,19 +518,20 @@ let convertToCpp = (data) => {
     forEachRegister(data, '/', (node, address) => {
         const className     = getClasslName(node.parent + node.name);
         const enclosingName = getClasslNameLong(node.parent);
+        const offset = node.offset.match(/^0x/i) ? node.offset : `0x${node.offset}`;
 
         result += `\n`;
         result += `/*\n`;
         result += ` * ${node.parent + node.name}\n`;
-        result += ` *   - Base:    0x${(address - parseInt(node.offset, 16)).toString(16)}\n`
-        result += ` *   - Offset:  0x${node.offset}\n`;
+        result += ` *   - Base:    0x${(address - parseInt(offset)).toString(16)}\n`
+        result += ` *   - Offset:  ${offset}\n`;
         result += ` *   - Address: 0x${address.toString(16)}\n`;
         result += ` */\n`;
 
         result += `class ${enclosingName}::${className} {\n`;
         result += `public:\n`;
         result += `    static const uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
-        result += `    static const uintptr_t g_DeclareOffset  = 0x${node.offset};\n`;
+        result += `    static const uintptr_t g_DeclareOffset  = ${offset};\n`;
         result += `    static const uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
         result += `    static const size_t    g_Size           = ${node.size};\n`;
         result += `\n`;
