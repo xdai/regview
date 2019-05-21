@@ -183,6 +183,8 @@ class RegisterViewer extends Component {
 								<Fragment key={i}>
 									<label>{v.value}</label>
 									<label>=</label>
+									<label>0x{v.value.toString(16).toUpperCase()}</label>
+									<label>=</label>
 									<label>{v.name}</label>
 								</Fragment>
 							)

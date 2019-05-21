@@ -3,7 +3,7 @@ import { Redirect } from "react-router-dom";
 
 import { regDb } from '../RegDb';
 import { RegContainer, Field } from './RegContainer';
-import { getCoordinate, isInRange } from './Utils';
+import { parseIntStr, getCoordinate, isInRange } from './Utils';
 import { Warning, Keyword } from './Form';
 
 import './RegEditor.css';
@@ -462,14 +462,26 @@ class RegEditor extends Component {
 
 	// when "add" button is cicked
  	onAddField = (e) => {
- 		this.props.addField({
- 			bits: [this.state.begin, this.state.end].sort((a,b) => a - b),
- 			name: this.state.field_name,
-			meaning: this.state.field_desc,
-			value: this.state.field_value
- 		});
+		const bits = [this.state.begin, this.state.end].sort((a,b) => a - b);
+		const width = bits[1] - bits[0] + 1;
+		const index = this.state.field_value.findIndex(el => el.value >= Math.pow(2, width));
 
- 		this.reset();
+		if (index >= 0) {
+			const name  = this.state.field_value[index].name;
+			const value = this.state.field_value[index].value;
+			this.setState({
+				error: <li><Keyword>{name}</Keyword>: value <Keyword>{value}</Keyword> out of range</li>
+			})
+		} else {
+			this.props.addField({
+				bits: bits,
+				name: this.state.field_name,
+				meaning: this.state.field_desc,
+				value: this.state.field_value
+			});
+
+			 this.reset();
+		}
  	}
 	 
 	// when "update" button is clicked
@@ -541,7 +553,8 @@ class RegEditor extends Component {
 			return;
 		}
 		
-		if (!this.state.symbolic_value.match(/^ *[0-9]+ *$/)) {
+		const val = parseIntStr(this.state.symbolic_value);
+		if (isNaN(val)) {
 			this.setState({
 				error: <li><Keyword>{this.state.symbolic_value}</Keyword> is not a valid field value (i.e. decimal)</li>
 			});
@@ -549,7 +562,7 @@ class RegEditor extends Component {
 			return;
 		}
 
-		if (this.state.field_value.find((el) => el.value === this.state.symbolic_value)) {
+		if (this.state.field_value.find((el) => el.value === val)) {
 			this.setState({
 				error: <li><Keyword>{this.state.symbolic_value}</Keyword> already has a symbolic name</li>
 			});
@@ -562,7 +575,7 @@ class RegEditor extends Component {
 				...prevState.field_value,
 				{
 					name: prevState.symbolic_name,
-					value: prevState.symbolic_value
+					value: val
 				}
 			].sort((a, b) => a.value - b.value),
 			symbolic_name: undefined,
@@ -724,7 +737,7 @@ class RegEditor extends Component {
 								this.state.field_value.map((v, idx) =>
 									<tr key={idx}>
 										<td>{v.name}</td>
-										<td>{v.value}</td>
+										<td>{v.value} / 0x{v.value.toString(16).toUpperCase()}</td>
 										<td><button onClick={()=>this.onDeleteFieldValue(idx)}>Delete</button></td>
 									</tr>
 								)

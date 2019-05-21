@@ -12,6 +12,17 @@ export function num2hexstr(n) {
 	return "0x" + ("00000000" + n.toString(16)).toUpperCase().substr(-8);
 }
 
+export function parseIntStr(s) {
+	if (s.match(/^\s*\d+\s*$/) ||
+		s.match(/^\s*0[0-7]+\s*$/) ||
+		s.match(/^\s*0x[0-9a-f]+\s*$/i)) {
+		return parseInt(s);
+	}
+	else {
+		return NaN;
+	}
+}
+
 export function getCoordinate(offset, width) {
 	const row = Math.floor(offset / width) + 1;
 	const col = width - offset % width;

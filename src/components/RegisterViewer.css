@@ -65,6 +65,6 @@ table.field-table th:hover::after {
 div.symbolic-values {
 	padding: 5px 0 0 5px;
 	display: grid;
-	grid-template-columns: auto auto 1fr;
+	grid-template-columns: auto auto auto auto 1fr;
 	grid-column-gap: 5px;
 }
