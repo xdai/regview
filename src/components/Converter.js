@@ -352,6 +352,12 @@ let convertToCpp = (data) => {
     result += "  The content herein is highly confidential and should be handled accordingly.\n";
     result += " *--------------------------------------------------------------------------------*/\n";
 
+    result += "\n";
+    result += "/**\n";
+    result += " * @file\n";
+    result += " * @brief Automatically generated Register Accessors\n";
+    result += " */\n";
+
     // Nolint
     result += "\n";
     result += "// NOLINT(build/header_guard)\n";
@@ -377,7 +383,33 @@ let convertToCpp = (data) => {
     let hasSymbolicValue = (field) => (field.value && field.value.length > 0);
 
     result += `\n`;
+    result += `/**\n`;
+    result += ` * @class At\n`;
+    result += ` * @brief Address Policy Tag to apply an absolute runtime address\n`;
+    result += ` *\n`;
+    result += ` * @details\n`;
+    result += ` *   This is an incomplete type intended to be used as dispatch tag for template\n`;
+    result += ` *   methods. With this tag, the factory method to create a new instance of\n`;
+    result += ` *   group or register will interpreate its sole argument as the absolute\n`;
+    result += ` *   runtime address of such group or register.\n`;
+    result += ` */\n`;
     result += `class At;\n`;
+    
+    result += `\n`;
+    result += `/**\n`;
+    result += ` * @class Offset\n`;
+    result += ` * @brief Address Policy Tag to apply an extra address offset\n`;
+    result += ` *\n`;
+    result += ` * @details\n`;
+    result += ` *   This is an incomplete type intended to be used as dispatch tag for template\n`;
+    result += ` *   methods. With this tag, the factory method to create a new instance of\n`;
+    result += ` *   group or register will interpreate its sole argument as an address offset.\n`;
+    result += ` *   The runtime address of such group or register is calculated by adding\n`
+    result += ` *   together:\n`;
+    result += ` *   -# runtime address of its parent\n`;
+    result += ` *   -# declare offset of itself\n`;
+    result += ` *   -# this extra offset\n`;
+    result += ` */\n`;
     result += `class Offset;\n`;
     const rootClassName = 'Register';
 
@@ -386,9 +418,22 @@ let convertToCpp = (data) => {
     //////////////////////////////////////////////////////////
     
     result += `\n`;
+    result += `/**\n`;
+    result += ` * @brief Top level class for the register accessors\n`;
+    result += ` *\n`;
+    result += ` * @details\n`;
+    result += ` *   This class represents the top level container of all groups and registers.\n`;
+    result += ` *   All of its data members and methods are static\n`;
+    result += ` */\n`;
     result += `class ${rootClassName} {\n`;
     result += `public:\n`;
+    result += `    /**\n`;
+    result += `     * @brief Declare Address\n`;
+    result += `     */\n`;
     result += `    static const uintptr_t g_DeclareAddress = 0;\n`;
+    result += `    /**\n`;
+    result += `     * @brief Runtime Address\n`;
+    result += `     */\n`;
     result += `    static const uintptr_t g_RuntimeAddress = 0;\n`;
     result += `\n`;
     data['/'].children.forEach((path) => {
@@ -453,10 +498,23 @@ let convertToCpp = (data) => {
     result += `public:\n`;
     data['/'].children.forEach((path) => {
         result += `\n`;
-        result += `    /*\n`;
-        result += `     * Child: ${path}\n`;
+        result += `    /**\n`;
+        result += `     * @brief Factory method to create an instance of ${path}\n`;
+        result += `     * @details\n`;
+        result += `     *   The runtime address of the new instance is calculated by adding together:\n`;
+        result += `     *   -# runtime address of its parent\n`;
+        result += `     *   -# declare offset of itself\n`;
         result += `     */\n`;
         result += `    static inline ${getClasslName(path)} ${getFactoryName(path)}() NN_NOEXCEPT;\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Factory method to create an instance of ${path}\n`;
+        result += `     * @details\n`;
+        result += `     *   The runtime address of the new instance is determined by the template\n`;
+        result += `     *   parameter, which can only be one of:\n`;
+        result += `     *   - At\n`;
+        result += `     *   - Offset\n`;
+        result += `     */\n`;
         result += `    template <typename AddressPolicy>\n`;
         result += `    static inline ${getClasslName(path)} ${getFactoryName(path)}(uintptr_t) NN_NOEXCEPT;\n`;
         
@@ -473,16 +531,31 @@ let convertToCpp = (data) => {
         const offset = node.offset.match(/^0x/i) ? node.offset : `0x${node.offset}`;
 
         result += `\n`;
-        result += `/*\n`;
-        result += ` * ${node.parent  + node.name}\n`;
-        result += ` *   - Base:    0x${(address - parseInt(offset)).toString(16)}\n`
-        result += ` *   - Offset:  ${offset}\n`;
-        result += ` *   - Address: 0x${address.toString(16)}\n`;
+        result += `/**\n`;
+        result += ` * @brief Class for group ${node.parent  + node.name}\n`;
+        result += ` *\n`;
+        result += ` * @details\n`;
+        result += ` *   This class represents the group ${node.parent  + node.name}.\n`;
+        result += ` *   The declared address information are:\n`;
+        result += ` *   - %Base:    0x${(address - parseInt(offset)).toString(16)}\n`
+        result += ` *   - %Offset:  ${offset}\n`;
+        result += ` *   - %Address: 0x${address.toString(16)}\n`;
         result += ` */\n`;
         result += `class ${enclosingName}::${className} {\n`;
         result += `public:\n`;
+        result += `    /**\n`;
+        result += `     * @brief Declared Base Address\n`;
+        result += `     */\n`;
         result += `    static const uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Declared Address Offset\n`;
+        result += `     */\n`;
         result += `    static const uintptr_t g_DeclareOffset  = ${offset};\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Declared Address\n`;
+        result += `     */\n`;
         result += `    static const uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
         result += `\n`;
         children.forEach((path) => {
@@ -490,24 +563,39 @@ let convertToCpp = (data) => {
         });
         result += `\n`;
         result += `private:\n`;
-        result += `    uintptr_t m_RuntimeAddress;\n`;
+        result += `    uintptr_t m_RuntimeAddress{g_DeclareAddress};\n`;
         result += `\n`;
         result += `public:\n`;
-        result += `    explicit ${className}(uintptr_t n) NN_NOEXCEPT\n`;
-        result += `        : m_RuntimeAddress(n)\n`;
+        result += `    /**\n`;
+        result += `     * @brief Constructor\n`;
+        result += `     * @param[in] addr The runtime address\n`;
+        result += `     */\n`;
+        result += `    explicit ${className}(uintptr_t addr) NN_NOEXCEPT\n`;
+        result += `        : m_RuntimeAddress(addr)\n`;
         result += `    {\n`;
         result += `    }\n`;
-        result += `    ${className}() NN_NOEXCEPT\n`;
-        result += `        : m_RuntimeAddress(g_DeclareAddress)\n`;
-        result += `    {\n`;
-        result += `    }\n`;
+        result += `\n`;
+        result += `    ${className}() NN_NOEXCEPT = default;\n`;
         
         children.forEach((path) => {
             result += `\n`;
-            result += `    /*\n`;
-            result += `     * Child Factory: ${path}\n`;
+            result += `    /**\n`;
+            result += `     * @brief Factory method to create an instance of ${path}\n`;
+            result += `     * @details\n`;
+            result += `     *   The runtime address of the new instance is calculated by adding together:\n`;
+            result += `     *   -# runtime address of its parent\n`;
+            result += `     *   -# declare offset of itself\n`;
             result += `     */\n`;
             result += `    inline ${getClasslName(path)} ${getFactoryName(path)}() const NN_NOEXCEPT;\n`;
+            result += `\n`;
+            result += `    /**\n`;
+            result += `     * @brief Factory method to create an instance of ${path}\n`;
+            result += `     * @details\n`;
+            result += `     *   The runtime address of the new instance is determined by the template\n`;
+            result += `     *   parameter, which can only be one of:\n`;
+            result += `     *   - At\n`;
+            result += `     *   - Offset\n`;
+            result += `     */\n`;
             result += `    template <typename AddressPolicy>\n`;
             result += `    inline ${getClasslName(path)} ${getFactoryName(path)}(uintptr_t n) const NN_NOEXCEPT;\n`;
         });
@@ -521,24 +609,46 @@ let convertToCpp = (data) => {
         const offset = node.offset.match(/^0x/i) ? node.offset : `0x${node.offset}`;
 
         result += `\n`;
-        result += `/*\n`;
-        result += ` * ${node.parent + node.name}\n`;
-        result += ` *   - Base:    0x${(address - parseInt(offset)).toString(16)}\n`
-        result += ` *   - Offset:  ${offset}\n`;
-        result += ` *   - Address: 0x${address.toString(16)}\n`;
+        result += `/**\n`;
+        result += ` * @brief Class for register ${node.parent  + node.name}\n`;
+        result += ` *\n`;
+        result += ` * @details\n`;
+        result += ` *   This class represents the ${node.desc_short}, i.e. ${node.parent  + node.name}.\n`;
+        result += ` *\n`;
+        result += ` *   The declared address information are:\n`;
+        result += ` *   - %Base:    0x${(address - parseInt(offset)).toString(16)}\n`
+        result += ` *   - %Offset:  ${offset}\n`;
+        result += ` *   - %Address: 0x${address.toString(16)}\n`;
         result += ` */\n`;
-
         result += `class ${enclosingName}::${className} {\n`;
         result += `public:\n`;
+        result += `    /**\n`;
+        result += `     * @brief Declared Base Address\n`;
+        result += `     */\n`;
         result += `    static const uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Declared Address Offset\n`;
+        result += `     */\n`;
         result += `    static const uintptr_t g_DeclareOffset  = ${offset};\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Declared Address\n`;
+        result += `     */\n`;
         result += `    static const uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Size of this register in bytes\n`;
+        result += `     */\n`;
         result += `    static const size_t    g_Size           = ${node.size};\n`;
         result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Smallest integer type that can hold the value of this register\n`;
+        result += `     */\n`;
         result += `    typedef typename BaseTypeOfBytes_<g_Size>::value ValueType_;\n`;
         result += `\n`;
         result += `private:\n`;
-        result += `    uintptr_t m_RuntimeAddress;\n`;
+        result += `    uintptr_t m_RuntimeAddress{g_DeclareAddress};\n`;
         result += `    class     Data_;\n`;
         result += `\n`;
         node.fields.forEach((field) => {
@@ -548,39 +658,67 @@ let convertToCpp = (data) => {
         result += `public:\n`;
         node.fields.forEach((field) => {
             if (hasSymbolicValue(field)) {
+                result += `    /**\n`;
+                result += `     * @brief Symbolic values for the field ${field.name}\n`;
+                result += `     */\n`;
                 result += `    enum class ${siglofyName(field.name)}Value : ${classifyName(field.name)}_::ValueType {\n`;
                 field.value.forEach(symbolic => {
-                    result += `        ${siglofyName(symbolic.name)} = ${symbolic.value},\n`;
+                    result += `        ${siglofyName(symbolic.name)} = ${symbolic.value}, //!< ${symbolic.name}\n`;
                 });
                 result += `    };\n`;
             }
         });
         result += `\n`;
         result += `public:\n`;
-        result += `    explicit ${className}(uintptr_t n) NN_NOEXCEPT\n`;
-        result += `        : m_RuntimeAddress(n)\n`;
-        result += `    {\n`;
-        result += `    }\n`;
-        result += `    ${className}() NN_NOEXCEPT\n`;
-        result += `        : m_RuntimeAddress(g_DeclareAddress)\n`;
+        result += `    /**\n`;
+        result += `     * @brief Constructor\n`;
+        result += `     * @param[in] addr The runtime address\n`;
+        result += `     */\n`;
+        result += `    explicit ${className}(uintptr_t addr) NN_NOEXCEPT\n`;
+        result += `        : m_RuntimeAddress(addr)\n`;
         result += `    {\n`;
         result += `    }\n`;
         result += `\n`;
+        result += `    ${className}() NN_NOEXCEPT = default;\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Read register value to memory\n`;
+        result += `     */\n`;
         result += `    inline Data_ Get() const NN_NOEXCEPT;\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Write a value from memory to register\n`;
+        result += `     * @param[in] value The value to be written\n`;
+        result += `     */\n`;
         result += `    inline void  Set(ValueType_ value) NN_NOEXCEPT;\n`;
         result += `};\n`;
 
         result += `\n`;
+        result += `/**\n`;
+        result += ` * @brief In memory value type for register ${node.parent  + node.name}\n`;
+        result += ` * @details\n`;
+        result += ` *   This class is the in memory reprensentation of the register value.\n`;
+        result += ` *   It provides accessors to read / write the fields of the register. Those\n`;
+        result += ` *   accessors affect only the in memory copy of the register value.\n`;
+        result += ` *   value.\n`;
+        result += ` */\n`;
         result += `class ${enclosingName}::${className}::Data_ {\n`;
         result += `private:\n`;
         result += `    ValueType_ m_Value;\n`
         result += `\n`;
         result += `public:\n`;
+        result += `    /**\n`;
+        result += `     * @brief Constructor\n`;
+        result += `     * @param[in] value The register reading\n`;
+        result += `     */\n`;
         result += `    explicit Data_(ValueType_ value) NN_NOEXCEPT\n`;
         result += `        : m_Value(value)\n`;
         result += `    {\n`;
         result += `    }\n`;
         result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Implicitly convert back to ValueType_\n`;
+        result += `     */\n`;
         result += `    NN_IMPLICIT operator ValueType_() const NN_NOEXCEPT\n`;
         result += `    {\n`;
         result += `        return m_Value;\n`;
@@ -589,7 +727,14 @@ let convertToCpp = (data) => {
             const fieldName = siglofyName(field.name);
             const valueType = hasSymbolicValue(field) ? `${siglofyName(field.name)}Value` : `${classifyName(field.name)}_::ValueType`;
             result += `\n`;
+            result += `    /**\n`;
+            result += `     * @brief Read the ${field.name} field\n`;
+            result += `     */\n`;
             result += `    inline ${valueType} ${fieldName}() const NN_NOEXCEPT;\n`;
+            result += `\n`;
+            result += `    /**\n`;
+            result += `     * @brief Write the ${field.name} field\n`;
+            result += `     */\n`;
             result += `    inline Data_& ${fieldName}(${valueType} value) NN_NOEXCEPT;\n`
         });
         result += `};\n`;
