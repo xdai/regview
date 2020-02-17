@@ -1,822 +1,487 @@
-import React, { Component, Fragment } from 'react';
-import { Redirect } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
 
-import { regDb } from '../RegDb';
-import { RegContainer, Field } from './RegContainer';
-import { parseIntStr, getCoordinate, isInRange } from './Utils';
-import { Warning, Keyword } from './Form';
+// antd
+import { Row, Col, Modal, Form, Input, Button, Popconfirm, Card, Divider, Typography } from 'antd';
+import { DeleteOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+
+import schema from 'async-validator';
+
+import regDb from '../RegDb';
+
+import { BitEditor, idleFieldCtrl } from './BitGrid';
+import GroupSelect from './GroupSelect';
+import { ToggleTag } from './RegisterViewer';
+import { isNumberString, parseNumberString } from './Utils';
 
 import './RegEditor.css';
 
 const MaxRegSize = 64; // in bytes
 
+const EmptyNewField = {
+	bits: [],
+	name: "",
+	meaning: "",
+	value: [],
+};
+
 //------------------------------------------------------------
-class RegEditor extends Component {
-	constructor(props) {
-		super(props);
+export default function RegEditor(props) {
+	const {form, parent, activePath, reg, onFinish} = props;
+	const initialValues = {
+		...(reg || {
+			parent: parent,
+			size: "4",
+			fields: [],
+		}),
+		fieldCtrl: idleFieldCtrl,
+		newField: EmptyNewField,
+	};
 
-		if (this.props.op === '/edit') {
-			const node = this.props.data.node;
-			this.state = {
-				name: node.name,
-				parent: node.parent,
-				offset: node.offset,
-				size: node.size,
-				desc_short: node.desc_short,
-				desc_long: node.desc_long,
-				fields: node.fields,
-				
-				isEditingField: false,
-				done: false,
-				error: undefined
-			};
-		} else {
-			this.state = {
-				name: '',
-				parent: this.props.path,
-				offset: '0',
-				size: '4',
-				desc_short: 'N/A',
-				desc_long: '',
-				fields: [],
-				
-				isEditingField: false,
-				done: false,
-				error: undefined
-			};
+	// try to be smart: set `offset` and `size` based on current active register
+	useEffect(() => {
+		if (activePath) {
+			regDb.get(activePath).then(value => {
+				console.log(value);
+				form.setFieldsValue({
+					offset: (parseInt(value.offset, 16) + parseInt(value.size, 10)).toString(16).toUpperCase(),
+					size: value.size,
+				});
+			})
 		}
-	}
+	}, [])
 
-	validate = (key, val) => {
-		const validator = {
-			'name': value => {
-				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
-					if (value.toUpperCase() === this.props.data.node.name.slice(0, -1).toUpperCase()) {
-						return [false, <li key="name">Register name <Keyword>{value}</Keyword> is the same as parent</li>];
-					} else {
-						return [true];
-					}
-				} else if (value.match(/^\s*$/)) {
-					return [false, <li key="name">Register name cannot be empty.</li>]
-				} else {
-					return [false, <li key="name">Register name <Keyword>{value}</Keyword> is invalid</li>];
-				}
-			},
-			'parent': value => {
-				if (value.match(/^\/[/a-zA-Z0-9_ ]*$/)) {
-					return [true];
-				} else {
-					return [false, <li key="parent"><Keyword>{value}</Keyword> is an invalid parent name</li>];
-				}
-			},
-			'offset': value => {
-				if (value.match(/^(0x)?[0-9a-f]+$/i)) {
-					return [true];
-				} else {
-					return [false, <li key="offset">Register offset: <Keyword>{value}</Keyword> is an invalid hex number</li>]
-				}
-			},
-			'size': value => {
-				if (value.match(/^[1-9][0-9]*/) && parseInt(value, 10) <= MaxRegSize) {
-					return [true];
-				} else if (value.match(/^\s*$/)) {
-					return [false, <li key="size">Register size cannot be empty.</li>]
-				} else {
-					return [false, <li key="size">Register size <Keyword>{value}</Keyword> is invalid. It should be in range <Keyword>[1, {MaxRegSize}]</Keyword>.</li>]
-				}
-			},
-			'desc_short': value => {
-				if (value.match(/\S/)) {
-					return [true];
-				} else {
-					return [false, <li key="desc_short">Register summary cannot be empty</li>]
-				}
-			}
-		};
-
-		let error = [];
-		
-		for (let prop in validator) {
-			let rv;
-			if (key === prop) {
-				rv = validator[prop](val);
-			} else {
-				rv = validator[prop](this.state[prop]);
-			}
-
-			if (!rv[0]) {
-				error.push(rv[1]);
-			}
-		}
-
-		if (error.length) {
-			return <ul>{error}</ul>;
-		} else {
-			return null;
-		}
-	}
-
-	onInputChange = (e) => {
-		const target = e.target;
-		const name = target.name;
-		const value = target.value;
-
-		this.setState({
-			[name]: value,
-			error: this.validate(name, value)
+	const _commitField = async (idx) => {
+		const isNewField = isNaN(idx);
+		const fieldPath = isNewField ? ["newField"] : ["fields", idx];
+		const value = await form.validateFields([fieldPath]);
+		form.setFieldsValue({
+			fieldCtrl: idleFieldCtrl, 
+			...(isNewField && {
+				fields: [...form.getFieldValue(["fields"]), value.newField].sort((a, b) => a.bits[0] - b.bits[0]),
+				newField: EmptyNewField
+			})
 		});
 	}
 
-	canSubmit = () => {
-		return !this.state.error;
-	}
-
-	addField = (field) => {
-		this.setState((state) => ({
-			fields: [...state.fields, field].sort((a,b) => a.bits[0] - b.bits[0]),
-			error: undefined
-		}));
-	}
-
-	updateField = (pos, field) => {
-		this.setState((state) => {
-			let newFields = state.fields.slice(0);
-			const idx = newFields.findIndex((e) => e.bits[0] === pos);
-			newFields[idx] = field;
-
-			return ({
-				fields: newFields.sort((a,b) => a.bits[0] - b.bits[0]),
-				error: undefined
-			});
-		});
-	}
-
-	deleteField = (pos) => {
-		this.setState((state) => {
-			let newFields = state.fields.slice(0);
-			const idx = newFields.findIndex((e) => e.bits[0] === pos);
-			newFields.splice(idx, 1);
-
-			return ({
-				fields: newFields,
-				error: undefined
-			});
-		});
-	}
-
-	onEditingField = (isEditing) => {
-		this.setState({
-			isEditingField: isEditing
-		});
-	}
-
-	commitChange = () => {
-		const error = this.validate(undefined);
-		if (error) {
-			this.setState({
-				error: error
-			});
-			return;
-		}
-
+	const _commitForm = async (values) => {
+		const {fieldCtrl, fields, newField, ...rest} = values;
 		const data = {
-			name: this.state.name,
-			parent: this.state.parent,
-			offset: this.state.offset,
-			size: this.state.size,
-			desc_short: this.state.desc_short,
-			desc_long: this.state.desc_long,
-			fields: this.state.fields
-		};
+			...rest,
+			fields: fields || [],
+		}
 		
-		let promise;
-		if (this.props.op === '/edit') { // update
-			promise = regDb.set(this.props.path, data);
-		} else { // add
-			promise = regDb.add(data);
+		if (fieldCtrl.mode === "adding") {
+			data.fields.push(newField);
 		}
 
-		promise.then(() => {
-			this.setState({
-				done: true,
-				error: undefined
-			});
-		}).catch((error) => {
-			this.setState({
-				error: error.message
-			});
-		});
-	}
+		data.fields.sort((a, b) => a.bits[0] - b.bits[0]);
 
-	render() {
-		if (this.state.done) {
-			return (
-				<Redirect to={"/view" + this.state.parent + this.state.name}/>
-			);
-		}
-
-		const submitBtn = 
-			<button 
-				name="field-add-btn" 
-				onClick={this.commitChange} 
-				disabled={!this.canSubmit()}>
-				Done
-			</button>;
-		
-		return (
-			<Fragment>
-				<div className="reg-editor">
-					<label name="name-label">Name:</label>
-					<input name="name" type="text" required onChange={this.onInputChange} value={this.state.name || ""}/>
-					
-					<label name="parent-label">Group:</label>
-					{ 
-						this.props.op === '/edit' ? 
-						<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/> :
-						<label>{this.state.parent}</label>
-					}
-
-					<label name="offset-label">Offset:</label>
-					<input name="offset" type="text" placeholder="in hex" required onChange={this.onInputChange} value={this.state.offset || ""}/>
-					
-					<label name="size-label">Size:</label>
-					<input name="size" type="number" min={1} max={MaxRegSize} placeholder="in bytes" required onChange={this.onInputChange} value={this.state.size}/>
-					
-					<label name="desc-short-label">Summary:</label>
-					<input name="desc_short" required onChange={this.onInputChange} value={this.state.desc_short || ""}/>
-					
-					<label name="desc-long-label">Detail:</label>
-					<textarea name="desc_long" placeholder="optional" onChange={this.onInputChange} value={this.state.desc_long || ""}/>
-					
-					<FieldEditor
-						size={this.state.size} 
-						width={32}
-						fields={this.state.fields}
-						addField={this.addField}
-						updateField={this.updateField}
-						deleteField={this.deleteField}
-						onEditing={this.onEditingField}
-					/>
-
-					{ !this.state.isEditingField && submitBtn }
-				</div>
-				<Warning>{this.state.error}</Warning>
-			</Fragment>
+		// trancate the fields exsiding `maxBit`
+		const maxBit = 8 * data.size - 1;
+		data.fields = data.fields.filter(
+			field => field.bits[0] <= maxBit
+		).map(
+			field => ({
+				bits: [field.bits[0], Math.min(maxBit, field.bits[1])],
+				name: field.name,
+				meaning: field.meaning,
+				value: field.value,
+			})
 		);
+		
+		if (reg) { // update
+			await regDb.set(reg.parent + reg.name, data);
+		} else { // add new
+			await regDb.add(data);
+		}
+		
+		onFinish();
 	}
+
+	return (
+		<Form 
+			form={form} 
+			colon={false} layout="vertical"
+			initialValues={initialValues}
+			onFinish={_commitForm}
+		>
+			<Row gutter={24}>
+				<Col span={6}>
+					<Form.Item 
+						label="Name"
+						name="name"
+						validateFirst
+						rules={
+							[{
+								required: true,
+								whitespace: true,
+								message: "required"
+							}, {
+								pattern: /^[a-z][a-z0-9_ ]*$/i,
+								message: "invalid",
+							}]
+						}
+					>
+						<Input allowClear/>
+					</Form.Item>
+				</Col>
+				<Col span={10}>
+					<Form.Item 
+						label="Group"
+						name="parent"
+						validateFirst
+						rules={
+							[{
+								required: true,
+								whitespace: true,
+								message: "required"
+							}, {
+								pattern: /^\/[/a-zA-Z0-9_ ]*$/,
+								message: "invalid",
+							}]
+						}
+					>
+						<GroupSelect/>
+					</Form.Item>
+				</Col>
+				<Col span={4}>
+					<Form.Item 
+						label="Offset"
+						name="offset"
+						validateFirst
+						rules={
+							[{
+								required: true,
+								whitespace: true,
+								message: "required",
+							}, {
+								pattern: /^[0-9a-f]+$/i,
+								message: "not a hex number",
+							}]
+						}
+					>
+						<Input addonBefore="0x" allowClear/>
+					</Form.Item>
+				</Col>
+				<Col span={4}>
+					<Form.Item 
+						label="Size"
+						name="size"
+						validateFirst
+						rules={
+							[{
+								required: true,
+								whitespace: true,
+								message: "required",
+							}, {
+								pattern: /^[0-9]+$/,
+								message: "not an integer",
+								
+							}, {
+								validator: (rule, value) => {
+									if ((value - 1) & value) {
+										return Promise.reject("not power of 2");
+									} else if (value < 1 || value > MaxRegSize) {
+										return Promise.reject(`not in range [1, ${MaxRegSize}]`);
+									} else {
+										return Promise.resolve();
+									}
+								},
+							}]
+						}
+					>
+						<Input allowClear/>
+					</Form.Item>
+				</Col>
+			</Row>
+			<Form.Item 
+				label="Summary"
+				name="desc_short"
+				validateFirst
+				rules={
+					[{
+						required: true,
+						whitespace: true,
+						message: "required"
+					}]
+				}
+			>
+				<Input allowClear/>
+			</Form.Item>
+			<Form.Item 
+				label="Detail"
+				name="desc_long"
+			>
+				<Input.TextArea rows={4} />
+			</Form.Item>
+			<FieldCtrl commitField={_commitField}/>
+			<FieldList commitField={_commitField}/>
+		</Form>
+	);
 }
 
-/*
- * Props:
- *   - size: total bits of this register
- *   - width: bit count per line
- */
- class FieldEditor extends Component {
- 	constructor(props) {
-		super(props);
-		 
-		this.state = {
-			mode: "init",
-			focus: undefined,
-			begin: undefined,
-			end: undefined,
-			field_name: undefined,
-			field_desc: undefined,
-			
-			field_value: [],
-			symbolic_name: undefined,
-			symbolic_value: undefined,
+function FieldCtrl(props) {
+	const shouldUpdate = (prev, current) => { // when fields or size are changed
+		if (prev.size !== current.size) return true;
 
-			error: undefined
- 		}
-	}
+		const [a, b] = [prev.fields, current.fields];
 
-	reset = () => {
-		this.setState({
-			mode: "init",
-			focus: undefined,
-			begin: undefined,
-			end: undefined,
-			field_name: undefined,
-			field_desc: undefined,
-			
-			field_value: [],
-			symbolic_name: undefined,
-			symbolic_value: undefined,
-			
-			error: undefined
-		});
-
-		this.props.onEditing(false);
-	}
-
-	validate = (key, val) => {
-		const validator = {
-			'field_name': value => {
-				if (!value || value.match(/^[a-zA-Z][a-zA-Z0-9_/ ]*$/)) {
-					return [true];
-				} else {
-					return [false, <li key="field_name"><Keyword>{value}</Keyword> is an invalid field name</li>];
-				}
-			}
-		};
-
-		let error = [];
-		
-		for (let prop in validator) {
-			let rv;
-			if (key === prop) {
-				rv = validator[prop](val);
-			} else {
-				rv = validator[prop](this.state[prop]);
-			}
-
-			if (!rv[0]) {
-				error.push(rv[1]);
-			}
-		}
-
-		if (error.length) {
-			return <ul>{error}</ul>;
-		} else {
-			return null;
-		}
-	}
-
-	canSubmit = () => {
-		return this.state.field_name && !this.state.error && (this.state.mode === 'close_field' || this.state.mode === 'close_candidate');
-	}
-
- 	// Check if field [begin,end] can be added. I.e. no intersection with other fields
- 	canAddField = (begin, end) => {
-		let isIntersect = (ra, rb) => {
-			return isInRange(ra[0], rb) || isInRange(ra[1], rb) ||
-				isInRange(rb[0], ra) || isInRange(rb[1], ra);
-		};
-		const fields = this.props.fields;
-		
-		for (let i = 0; i < fields.length; i++) {
-			if (this.isUpdatingField() && this.state.focus === fields[i].bits[0]) {
-				continue;
-			}
-			if (isIntersect([begin, end], fields[i].bits)) {
-				return false;
+		if (a.length !== b.length) return true;
+		for (let i = 0; i < a.length; i++) {
+			if (a[i].bits[0] !== b[i].bits[0] ||
+				a[i].bits[1] !== b[i].bits[1] ||
+				a[i].name.localeCompare(b[i].name) !== 0 ||
+				a[i].meaning.localeCompare(b[i].meaning) !== 0) {
+				return true;
 			}
 		}
 		
-		return true;
+		return false;
 	}
 
- 	// when we click on a bit
-	setFieldRange = (pos) => {
-		switch (this.state.mode) {
-		case "init":
-			this.setState({
-				mode: "open_candidate",
-				begin: pos,
-				end: pos,
-			});
-			this.props.onEditing(true);
-			break;
-		case "open_candidate":
-			if (this.canAddField(this.state.begin, pos)) {
-				this.setState({
-					mode: "close_candidate",
-					end: pos,
-				});
-			}
-			break;
-		case "close_candidate":
-			this.setState({
-				mode: "open_candidate",
-				begin: pos,
-				end: pos
-			});
-			break;
-		case "open_field":
-			if (this.canAddField(this.state.begin, pos)) {
-				this.setState({
-					mode: "close_field",
-					end: pos,
-				});
-			}
-			break;
-		case "close_field":
-			this.setState({
-				mode: "open_field",
-				begin: pos,
-				end: pos
-			});
-			break;
-		default:
-			break;
-		}
-	}
-
-	// when the field is open and we hover on the bit
-	trySetFieldRange = (pos) => {
-		switch (this.state.mode) {
-		case "open_candidate":
-		case "open_field":
-			if (this.canAddField(this.state.begin, pos)) {
-				this.setState({
-					end: pos
-				});
-			}
-			break;
-		default:
-			break;
-		}
+	const _render = (form) => {
+		const byteCount = form.getFieldValue("size");
+		return (
+			<Row type="flex" justify="center" style={{marginBottom: 24, paddingBottom: 8}}>
+				<Form.Item name="fieldCtrl">
+					<BitEditor 
+						cellWidth={30} bitsPerRow={16} byteCount={byteCount} 
+						form={form} 
+						commitField={props.commitField}
+					/>
+				</Form.Item>
+			</Row>
+		);
 	}
 	
-	// when we click on a field
-	onStartUpdating = (pos) => {
-		const idx = this.props.fields.findIndex((e) => e.bits[0] === pos);
-		const field = this.props.fields[idx];
+	return (
+		<Form.Item noStyle shouldUpdate={shouldUpdate}> 
+			{_render} 
+		</Form.Item>
+	);
+}
 
- 		this.setState({
- 			mode: "close_field",
- 			focus: field.bits[0],
- 			begin: field.bits[0],
- 			end: field.bits[1],
- 			field_name: field.name,
-			field_desc: field.meaning,
-			field_value: field.value || []
-		});
-		 
-		this.props.onEditing(true);
-	}
+function FieldList(props) {
+	const shouldUpdate = (prev, current) => {
+		const [a, b] = [prev.fieldCtrl, current.fieldCtrl];
 
- 	onInputChange = (e) => {
-		const target = e.target;
-		const name = target.name;
-		const value = target.value;
-
-		console.log(target);
-
-		this.setState({
-			[name]: value,
-			error: this.validate(name, value)
-		});
-	}
-
-	// when "add" button is cicked
- 	onAddField = (e) => {
-		const bits = [this.state.begin, this.state.end].sort((a,b) => a - b);
-		const width = bits[1] - bits[0] + 1;
-		const index = this.state.field_value.findIndex(el => el.value >= Math.pow(2, width));
-
-		if (index >= 0) {
-			const name  = this.state.field_value[index].name;
-			const value = this.state.field_value[index].value;
-			this.setState({
-				error: <li><Keyword>{name}</Keyword>: value <Keyword>{value}</Keyword> out of range</li>
-			})
-		} else {
-			this.props.addField({
-				bits: bits,
-				name: this.state.field_name,
-				meaning: this.state.field_desc,
-				value: this.state.field_value
-			});
-
-			 this.reset();
-		}
- 	}
-	 
-	// when "update" button is clicked
- 	onEndUpdating = () => {
-		const bits = [this.state.begin, this.state.end].sort((a,b) => a - b);
-		const width = bits[1] - bits[0] + 1;
-		const index = this.state.field_value.findIndex(el => el.value >= Math.pow(2, width));
-		
-		if (index >= 0) {
-			const name  = this.state.field_value[index].name;
-			const value = this.state.field_value[index].value;
-			this.setState({
-				error: <li><Keyword>{name}</Keyword>: value <Keyword>{value}</Keyword> out of range</li>
-			})
-		} else {
-			this.props.updateField(this.state.focus, {
-				bits: bits,
-				name: this.state.field_name,
-				meaning: this.state.field_desc,
-				value: this.state.field_value			 
-			});
-
-			this.reset();
-		}
- 	}
-
-	// when "cancel" button is clicked
- 	onCancelEditing = () => {
- 		this.reset();
- 	}
-
-	// when "delete" button is clicked
- 	onDeleteField = () => {
- 		this.props.deleteField(this.state.focus);
-		 
-		this.reset();
-	}
-	 
-	onAddFieldValue = () => {
-		if (!this.state.symbolic_name) {
-			this.setState({
-				error: <li>Symbolic name is not specified</li>
-			});
-
-			return;
+		if (a.mode !== b.mode || 
+			a.activeKey !== b.activeKey ||
+			a.selectedBits.length !== b.selectedBits.length) {
+				return true;
 		}
 
-		if (!this.state.symbolic_name.match(/^[a-zA-Z][a-zA-Z0-9_]*$/)) {
-			this.setState({
-				error: <li><Keyword>{this.state.symbolic_name}</Keyword> is not a valid symbolic name for field value</li>
-			});
-
-			return;
-		}
-
-		if (this.state.field_value.find((el) => el.name.toUpperCase() === this.state.symbolic_name.toUpperCase())) {
-			this.setState({
-				error: <li>Symbolic name <Keyword>{this.state.symbolic_name}</Keyword> already exist</li>
-			});
-
-			return;
-		}
-
-		if (!this.state.symbolic_value) {
-			this.setState({
-				error: <li>Value for the symbolic name <Keyword>{this.state.symbolic_name}</Keyword> is not specified</li>
-			});
-
-			return;
-		}
-		
-		const val = parseIntStr(this.state.symbolic_value);
-		if (isNaN(val)) {
-			this.setState({
-				error: <li><Keyword>{this.state.symbolic_value}</Keyword> is not a valid field value (i.e. decimal)</li>
-			});
-
-			return;
-		}
-
-		if (this.state.field_value.find((el) => el.value === val)) {
-			this.setState({
-				error: <li><Keyword>{this.state.symbolic_value}</Keyword> already has a symbolic name</li>
-			});
-
-			return;
-		}
-		
-		this.setState(prevState => ({
-			field_value: [
-				...prevState.field_value,
-				{
-					name: prevState.symbolic_name,
-					value: val
-				}
-			].sort((a, b) => a.value - b.value),
-			symbolic_name: undefined,
-			symbolic_value: undefined,
-
-			error: undefined
-		}))
-	}
-
-	onDeleteFieldValue = (idx) => {
-		this.setState(prevState => ({
-			field_value: [...prevState.field_value.slice(0, idx), ...prevState.field_value.slice(idx + 1)],
-			error: undefined
-		}));
-	}
-
- 	forEachField = (action) => {
-		this.props.fields.forEach((field) => {
-			action(field);
-		});
-	}
-
-	forEachBit = (action) => {
-		let pos = 0;
-		
-		this.forEachField((field) => {
-			const low  = field.bits[0];
-			const high = field.bits[1];
-
-			for (; pos < low; pos++) {
-				action(pos);
+		for (let i = 0; i < a.selectedBits.length; i++) {
+			if (a.selectedBits[i] !== b.selectedBits[i]) {
+				return true;
 			}
-
-			pos = high + 1;
-		});
-
-		for(; pos < Math.min(MaxRegSize, this.props.size) * 8; pos++) {
-			action(pos);
-		}
-	}
-
-	isAddingField = () => {
-		return this.state.mode === "open_candidate" || this.state.mode === "close_candidate";
-	}
-
-	isUpdatingField = () => {
-		return this.state.mode === "open_field" || this.state.mode === "close_field";
-	}
-
- 	render() {
-		let children = [];
-
-		const highlight = (pos) => {
-			if (isInRange(pos, [this.state.begin, this.state.end])) {
-				if (this.isAddingField()) {
-					return 'adding';
-				} else if (this.isUpdatingField()) {
-					return 'updating';
-				}
-			}
-
-			return 'none'
 		}
 
-		this.forEachField((field) => {
-			if (this.isUpdatingField() && field.bits[0] === this.state.focus) {
-				for (let pos = field.bits[0]; pos <= field.bits[1]; pos++) {
-					children.push(
-						<Bit 
-							key={pos} 
-							pos={pos} 
-							value={0} 
-							width={this.props.width}
-							highlight={highlight(pos)}
-							setFieldRange={this.setFieldRange}
-							trySetFieldRange={this.trySetFieldRange}
+		return false;
+	}
+	
+	const _render = (form) => {
+		const fields = form.getFieldValue("fields");
+		const editors = fields.map((_, i) => (
+			<FieldEditor key={i} form={form} fieldIdx={i} commitField={props.commitField}/>
+		));
+		return (
+			<>
+				{editors}
+				<FieldEditor form={form} fieldIdx={NaN} commitField={props.commitField}/>
+			</>
+		);
+	}
+	
+	return (
+		<Form.Item noStyle shouldUpdate={shouldUpdate}>
+			{_render}
+		</Form.Item>
+	)
+}
+
+function FieldEditor(props) {
+	const {form, fieldIdx} = props;
+
+	const fieldCtrl = form.getFieldValue(["fieldCtrl"]);
+	const isNewField = isNaN(fieldIdx);
+	const fieldPath = isNewField ? ["newField"] : ["fields", fieldIdx];
+	const isActive = (()=>{
+		if (fieldCtrl.mode === "editing" && fieldCtrl.activeKey === fieldIdx) return true;
+		if (fieldCtrl.mode === "adding" && isNewField) return true;
+		return false;
+	})();
+
+	// Don't bother to validate non-active fields.
+	const fieldNameRule = isActive ? [{
+		required: true,
+		whitespace: true,
+		message: "required"
+	}, {
+		pattern: /^[a-zA-Z][a-zA-Z0-9_ ]*$/,
+		message: "invalid"
+	}] : [];
+
+	const handleConfirm = () => {
+		props.commitField(fieldIdx);
+	}
+
+	const handleDelete = () => {
+		form.setFieldsValue({
+			fields: form.getFieldValue("fields").filter((_,i)=>i!==fieldIdx),
+			fieldCtrl: idleFieldCtrl,
+			newField: EmptyNewField,
+		})
+	}
+
+	const ConfirmBtn = () =>
+		<Button 
+			type="link" 
+			icon={<CheckOutlined />} 
+			disabled={fieldCtrl.selectedBits.length !== 2}
+			onClick={handleConfirm}
+		/>;
+
+	const DeleteBtn = () => isNewField ? (
+		<Button type="link" icon={<CloseOutlined/>} onClick={handleDelete}/>
+	) : (
+		<Popconfirm 
+			title={`Are you sure to delete this field?`} 
+			okText="Yes" cancelText="No"
+			onConfirm={handleDelete}
+		>
+			<Button type="link" icon={<DeleteOutlined/>} />
+		</Popconfirm>
+	);
+	
+	return (
+		<Card 
+			style={isActive ? {} : {display: "none"}}
+			size="small"
+			title={isNewField ? "Add Field" : "Edit Field"}
+			extra={<><ConfirmBtn/><DeleteBtn/></>}
+		>
+			<Form.Item name={[...fieldPath, "bits", 0]} style={{display: "none"}}>
+				<Input />
+			</Form.Item>
+			<Form.Item name={[...fieldPath, "bits", 1]} style={{display: "none"}}>
+				<Input />
+			</Form.Item>
+			<Form.Item label="Field Name" name={[...fieldPath, "name"]} rules={fieldNameRule}>
+				<Input allowClear />
+			</Form.Item>
+			<Form.Item label="Field Description" name={[...fieldPath, "meaning"]}>
+				<Input.TextArea rows={1} />
+			</Form.Item>
+			
+			<Divider orientation="left">Named Constants</Divider>
+			
+			<ConstantList form={form} fieldPath={fieldPath}/>
+		</Card>
+	)
+}
+
+function ConstantList(props) {
+	const {form, fieldPath} = props;
+	return (
+		<Form.List name={[...fieldPath, "value"]}>{(entries, {add, remove}) => {
+			const constants = form.getFieldValue([...fieldPath, "value"]);
+			return (<>
+				<Row>
+					<ConstantInput add={add} constants={constants}/>
+				</Row>
+				<div>
+				<Row className="constants-container">
+					{entries.map((entry, i) => (
+						<ToggleTag 
+							key={entry.key}
+							name={constants[entry.name].name}
+							value={parseNumberString(constants[entry.name].value)}
+							closable
+							onClose={() => remove(entry.name)}
+							style={{marginTop: 8}}
 						/>
-					);
-				}
-			} else {
-				children.push(
-					<Field key={field.bits[0]} 
-						{...field} 
-						width={this.props.width}
-						onStartUpdating={this.onStartUpdating}
-					/>
-				);
-			}
-		});
+					))}
+				</Row>
+				</div>
+			</>)
+		}}</Form.List>
+	)
+}
 
-		this.forEachBit((pos) => {
-			children.push(
-				<Bit 
-					key={pos} 
-					pos={pos} 
-					value={0} 
-					width={this.props.width}
-					highlight={highlight(pos)}
-					setFieldRange={this.setFieldRange}
-					trySetFieldRange={this.trySetFieldRange}
-				/>
-			);
-		});
+function ConstantInput({add, constants}) {
+	const [name, setName] = useState();
+	const [value, setValue] = useState();
+	const [error, setError] = useState();
 
-		let form;
-		let submitBtnText;
-		let submitBtnAction;
+	const validator = new schema({
+		name: [{
+			required: true,
+			whitespace: true,
+			message: "* Name is required",
+		}, {
+			pattern: /^[a-z][0-9a-z]*$/i,
+			message: "* Invalid Name",
+		}, {
+			validator: (rule, s) => !constants || !constants.some(constant => constant.name === s.trim()),
+			message: "* Name already in use",
+		}],
+		value: [{
+			required: true,
+			whitespace: true,
+			message: "* Value is required",
+		},{
+			validator: (rule, s) => isNumberString(s),
+			message: "* Value is not a valid decimal, hex, octal or binary number",
+		}]
+	})
+	
+	const handleAdd = () => {
+		validator.validate(
+			{name, value}, 
+			{first: true, firstFields: true}
+		).then(() => {
+			// name is trim'ed, but value is kept as original radix.
+			add({name: name.trim(), value});
+			setName();
+			setValue();
+			setError();
+		}).catch(({errors, fields}) => {
+			setError(errors[0].message)
+		})
+	}
+	
+	return (
+		<Input.Group compact style={{marginBottom: 16}}>
+			<Input placeholder="Name" id="constant-left" onInput={e=>setName(e.target.value)} value={name}/>
+			<Input placeholder="&equiv;" disabled id="constant-middle"/>
+			<Input placeholder="Value" id="constant-right" onInput={e=>setValue(e.target.value)} value={value}/>
+			<Button type="primary" onClick={handleAdd}>Add</Button>
+			<Typography.Text type="danger" className="constant-error">{error}</Typography.Text>
+		</Input.Group>
+	)
+}
 
-		if (this.isAddingField()) {
-			submitBtnText = "Add Field";
-			submitBtnAction = this.onAddField;
-		} else if (this.isUpdatingField()) {
-			submitBtnText = "Update Field";
-			submitBtnAction = this.onEndUpdating;
-		}
+export function RegEditorModal(props) {
+	const {parent, activePath, reg, title, hide} = props;
+	const [form] = Form.useForm();
+	
+	const modalProps = {
+		title: title,
+		width: 960,
+		// The visibility is controlled by mount / unmount of the component instead 
+		// of the `visible` props, so we get a new `form` for each register. If we 
+		// re-use the `form`, the `initialValue` of the `form` will not be set
+		// correctly. This is likely a bug of antd.
+		visible: true,
+		maskClosable: false,
+		onOk: form.submit,
+		onCancel: hide,
+	};
 
-		const submitBtn = 
-			<button 
-				name="field-submit-btn" 
-				onClick={submitBtnAction} 
-				disabled={!this.canSubmit()}>
-				{submitBtnText}
-			</button>;
-		
-		const cancelBtn = 
-			<button 
-				name="field-cancel-btn" 
-				onClick={this.onCancelEditing}>
-				Cancel Editing
-			</button>;
-		
-		const deleteBtn = this.isUpdatingField() ?
-			<button 
-				name="field-delete-btn" 
-				onClick={this.onDeleteField}>
-				Delete Field
-			</button> : null;
-
-		if (this.isAddingField() || this.isUpdatingField()) {
-			form = 
-				<div className="field-form">
-					<label name="field-name-label">Field Name:</label>
-					<input name="field_name" type="text" required onChange={this.onInputChange} value={this.state.field_name || ""}/>
-					
-					<label name="field-desc-label">Field Description:</label>
-					<textarea name="field_desc" onChange={this.onInputChange} value={this.state.field_desc || ""}/>
-
-					<label>Symbolic Values:</label>
-					<table className="symbolic-names">
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Value</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							{
-								this.state.field_value.map((v, idx) =>
-									<tr key={idx}>
-										<td>{v.name}</td>
-										<td>{v.value} / 0x{v.value.toString(16).toUpperCase()}</td>
-										<td><button onClick={()=>this.onDeleteFieldValue(idx)}>Delete</button></td>
-									</tr>
-								)
-							}
-							<tr>
-								<td>
-									<input 
-										name="symbolic_name"  
-										type="text" 
-										onChange={this.onInputChange} 
-										value={this.state.symbolic_name || ""}
-									/>
-								</td>
-								<td>
-									<input 
-										name="symbolic_value" 
-										type="text" 
-										onChange={this.onInputChange} 
-										value={this.state.symbolic_value || ""}
-									/>
-								</td>
-								<td>
-									<button onClick={this.onAddFieldValue}>Add</button>
-								</td>
-							</tr>
-						</tbody>
-					</table>
-
-					<div className="field-btns">
-						{submitBtn}
-						{cancelBtn}
-						{deleteBtn}
-					</div>
-				</div>;
-		}
-
- 		return (
- 			<div className="field-editor">
-	 			<RegContainer width={this.props.width} size={Math.min(MaxRegSize, this.props.size)}>
-	 				{children}
-	 			</RegContainer>
-
-	 			{form}
-
-				<Warning>{this.state.error}</Warning>
-			</div>
- 		);
- 	}
- }
-
-/*
- * Props:
- *   - pos: bit offset (base 0)
- *   - width: bit count per line
- *   - value: 0 or 1
- */
- class Bit extends Component {
- 	onClick = (e) => {
- 		this.props.setFieldRange(this.props.pos);
- 	}
-
- 	onHover = (e) => {
- 		this.props.trySetFieldRange(this.props.pos);
- 	}
- 	
- 	render() {
- 		const [row, col] = getCoordinate(this.props.pos, this.props.width);
- 		const bitStyle = {
- 			gridRow: row,
- 			gridColumnStart: col,
- 			gridColumnEnd: col,
- 		};
-		 
- 		return (
- 			<div className={`bit active-${this.props.highlight}`} style={bitStyle} onClick={this.onClick} onMouseOver={this.onHover}>
- 				{this.props.pos}
- 			</div>
- 		);
- 	}
- }
-
- export default RegEditor;
+	return (
+		<Modal {...modalProps}>
+			<RegEditor form={form} parent={parent} activePath={activePath} reg={reg} onFinish={hide}/>
+		</Modal>
+	);
+};

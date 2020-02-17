@@ -1,8 +1,10 @@
-import React, { Component, Fragment } from 'react';
-import { Redirect } from "react-router-dom";
+import React from 'react';
 
-import { regDb } from '../RegDb';
-import { Warning, NameInput, Keyword } from './Form';
+// antd
+import { Modal, Form, Input, message, Typography } from 'antd';
+
+import regDb, { KeyExistError } from '../RegDb';
+import GroupSelect from './GroupSelect';
 
 import './GroupEditor.css';
 
@@ -15,159 +17,114 @@ import './GroupEditor.css';
  *   - path
  *      - 
  */
-class GroupEditor extends Component {
-	constructor(props) {
-		super(props);
+export default function GroupEditor(props) {
+	const {form, parent, grp, onFinish} = props;
+	const initialValues = grp ? {
+		...grp,
+		name: grp.name.slice(0, -1),
+	} : { parent };
 
-		if (this.props.op === '/edit') {
-			const node = this.props.data.node;
-			this.state = {
-				name: node.name.slice(0, -1),
-				parent: node.parent,
-				offset: node.offset,
-				
-				error: undefined
-			};
-		} else {
-			this.state = {
-				name: '',
-				parent: this.props.path,
-				offset: '0',
-
-				error: undefined
-			};
-		}
-	}
-
-	validate = (key, val) => {
-		const validator = {
-			'name': value => {
-				if (value.match(/^[a-zA-Z][a-zA-Z0-9_ ]*$/)) {
-					if (value.toUpperCase() === this.props.data.node.name.slice(0, -1).toUpperCase()) {
-						return [false, <li key="name">Group name: <Keyword>{value}</Keyword> is the same as parent</li>];
-					} else {
-						return [true];
-					}
-				} else if (value.match(/^\s*$/)) {
-					return [false, <li key="name">Group name: it cannot be empty.</li>]
-				} else {
-					return [false, <li key="name">Group name: <Keyword>{value}</Keyword> is an invalid name</li>];
-				}
-			},
-			'parent': value => {
-				if (value.match(/^\/[/a-zA-Z0-9_ ]*$/)) {
-					return [true];
-				} else if (value.match(/^\s*$/)) {
-					return [false, <li key="parent">Group parent: it cannot be empty.</li>]
-				} else {
-					return [false, <li key="parent">Group parent: <Keyword>{value}</Keyword> is an invalid name</li>];
-				}
-			},
-			'offset': value => {
-				if (value.match(/^(0x)?[0-9a-f]+$/i)) {
-					return [true];
-				} else if (value.match(/^\s*$/)) {
-					return [false, <li key="offset">Group offset: it cannot be empty.</li>]
-				}  else {
-					return [false, <li key="offset">Group offset: <Keyword>{value}</Keyword> is an invalid hex number</li>]
-				}
-			}
-		};
-
-		let error = [];
-		
-		for (let prop in validator) {
-			let rv;
-			if (key === prop) {
-				rv = validator[prop](val);
-			} else {
-				rv = validator[prop](this.state[prop]);
-			}
-
-			if (!rv[0]) {
-				error.push(rv[1]);
-			}
-		}
-
-		if (error.length) {
-			return <ul>{error}</ul>;
-		} else {
-			return null;
-		}
-	}
-	
-	onInputChange = (e) => {
-		const target = e.target;
-		const name = target.name;
-		const value = target.value;
-
-		this.setState({
-			[name]: value,
-			error: this.validate(name, value)
-		});
-	}
-
-	commitChange = () => {
+	const _commitForm = async (value) => {
 		const data = {
-			name: this.state.name + '/',
-			parent: this.state.parent.endsWith('/') ? this.state.parent : this.state.parent + '/',
-			offset: this.state.offset
-		};
-
-		let promise;
-		if (this.props.op === '/edit') { // update
-			promise = regDb.set(this.props.path, data);
-		} else { // add
-			promise = regDb.add(data);
+			name: value.name + "/",
+			parent: value.parent,
+			offset: value.offset,
 		}
-
-		promise.then(() => {
-			this.setState({
-				done: true
-			});
-		}).catch((error) => {
-			this.setState({
-				error: error.message
-			});
-		});
+		try {
+			if (grp) { // update
+				await regDb.set(grp.parent + grp.name, data);
+			} else { // create new
+				await regDb.add(data);
+			}
+			onFinish();
+		} catch (e) {
+			if (e instanceof KeyExistError) {
+				message.error(
+					<span>
+						Entry with key <Typography.Text code>{e.message}</Typography.Text> is already exist
+					</span>
+				)
+			} else {
+				message.error(`${e.name}: ${e.message}`);
+			}
+		}
 	}
 	
-	render() {
-		if (this.state.done) {
-			const parent = this.state.parent.endsWith('/') ? this.state.parent : this.state.parent + '/';
-			return (
-				<Redirect to={"/view" + parent + this.state.name + "/"}/>
-			);
-		}
+	const formProps = {
+		labelCol:   { span: 4  },
+		wrapperCol: { span: 20 },
+		form, 
+		initialValues,
+		onFinish: _commitForm,
+	};
 
-		return (
-			<Fragment>
-				<div className="group-editor">
-					<label name="name-label">Name:</label>
-					<NameInput name="name" required onChange={this.onInputChange} value={this.state.name || ""}/>
-					
-					<label name="parent-label">Parent:</label>
-					{ 
-						this.props.op === '/edit' ? 
-						<input name="parent" type="text" required onChange={this.onInputChange} value={this.state.parent || ""}/> :
-						<label>{this.state.parent}</label>
+	return (
+		<Form {...formProps}>
+			<Form.Item
+				label="Parent"
+				name="parent"
+				rules={[
+					{
+						required: true,
+						message: "required"
 					}
-
-					
-					<label name="offset-label">Offset:</label>
-					<input name="offset" type="text" required onChange={this.onInputChange} value={this.state.offset || ""}/>
-
-					<button 
-						onClick={this.commitChange} 
-						disabled={this.state.error}>
-						Done
-					</button>
-				</div>
-
-				<Warning>{this.state.error}</Warning>
-			</Fragment>
-		);
- 	}
+				]}
+			>
+				<GroupSelect except={grp ? grp.parent + grp.name : null}/>
+			</Form.Item>
+			<Form.Item
+				label="Name"
+				name="name"
+				validateFirst
+				rules={[
+					{
+						required: true,
+						whitespace: true,
+						message: "required"
+					}, {
+						pattern: /^[a-zA-Z][a-zA-Z0-9_ ]*$/,
+						message: "invalid",
+					}
+				]}
+			>
+				<Input allowClear/>
+			</Form.Item>
+			<Form.Item
+				label="Offset"
+				name="offset"
+				validateFirst
+				rules={[
+					{
+						required: true,
+						whitespace: true,
+						message: "required",
+					}, {
+						pattern: /^[0-9a-f]+$/i,
+						message: "not a hex number",
+					}
+				]}
+			>
+				<Input addonBefore="0x" allowClear/>
+			</Form.Item>
+		</Form>
+	)
 }
+export function GroupEditorModal(props) {
+	const {parent, grp, title, hide} = props;
+	const [form] = Form.useForm();
 
-export default GroupEditor;
+	const modalProps = {
+		title: title,
+		width: 480,
+		visible: true, // see `RegEditorModal`
+		maskClosable: false,
+		onOk: form.submit,
+		onCancel: hide,
+	}
+	
+	return (
+		<Modal {...modalProps}>
+			<GroupEditor form={form} parent={parent} grp={grp} onFinish={hide}/>
+		</Modal>
+	);
+}
