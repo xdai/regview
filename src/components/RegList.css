@@ -1,0 +1,39 @@
+.reg-list {
+    height: 100%;
+    padding: 16px;
+    border-right: 1px solid rgb(240, 240, 240);
+    display: flex;
+    flex-direction: column;
+}
+
+.reg-list .tree-container {
+    overflow: auto;
+    height: 100%;
+    margin-top: 8px;
+}
+
+.tree-title .act-edit {
+    display: none;
+    margin: 0 4px;
+}
+
+.tree-title:hover .act-edit {
+    display: inline-block;
+}
+
+.tree-title:hover .act-edit:hover {
+    color: red
+}
+
+.tree-title .act-delete {
+    display: none;
+    margin: 0 4px;
+}
+
+.tree-title:hover .act-delete {
+    display: inline-block;
+}
+
+.tree-title:hover .act-delete:hover {
+    color: red
+}

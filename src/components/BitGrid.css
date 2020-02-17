@@ -1,0 +1,66 @@
+.bit-grid {
+	display: grid;
+	margin: auto;
+	text-align: center;
+	font-size: small;
+	user-select: none;
+}
+
+.bit-grid .bit-pos-marker {
+	grid-area: 1 / 1 ;
+
+	padding: 2px;
+	font-style: italic;
+	
+	display: grid;
+	grid-gap: 1px;
+}
+
+.bit-grid .byte-offset {
+	grid-area: 2 / 2;
+
+	padding: 2px;
+	
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-gap: 1px;
+}
+
+.bit-grid .grid {
+	grid-area: 2 / 1;
+
+	border: 2px solid #428bca;
+	background-color: #999999;
+	font-size: 7pt;
+	
+	display: grid;
+	grid-gap: 1px;
+}
+
+.bit-grid .field-fragment {
+	cursor: pointer;
+	background-color: #dfe3ee;
+}
+
+.bit-grid .field-fragment-rsvd {
+	cursor: pointer;
+	color: white;
+	background-color: #c4c7bce5;
+}
+
+.bit-grid div.bit {
+	background-color: #fff;
+	cursor: pointer;
+}
+
+.bit-grid div.bit.highlight {
+	background-color: #deff97;
+}
+
+.bit-grid .field-fragment {
+	overflow: hidden;
+}
+
+.bit-grid .field-fragment-rsvd {
+	overflow: hidden;
+}

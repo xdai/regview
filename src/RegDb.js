@@ -1,10 +1,4 @@
-import React from 'react';
-import { openDb } from 'idb';
-import { splitKey } from './components/Utils';
-
-export const RegContext = React.createContext();
-
-let dbCache = undefined;
+import { openDB } from 'idb';
 
 class RegDb {
 	constructor() {
@@ -13,364 +7,248 @@ class RegDb {
     		return;
 		}
 
-		this.dbPromise = openDb('NnRegView', 1, upgradeDb => {
-			if (!upgradeDb.objectStoreNames.contains('store')) {
-		    	const store = upgradeDb.createObjectStore('store');
-		    	store.createIndex("parent", "parent", {unique: false});
-    		}
-		});
+		this.observers = {
+			add: [],
+			update: [],
+			delete: [],
+		};
+
+		this.dbName    = "NnRegView";
+		this.storeName = "store";
+
+		this.dbPromise = openDB(
+			this.dbName, 
+			1, 
+			{
+				upgrade(db) {
+					if (!db.objectStoreNames.contains("store")) {
+						const store = db.createObjectStore("store");
+						store.createIndex("parent", "parent", {unique: false});
+					}
+				}
+			}
+		);
 	}
 
-	import = async (str, transaction) => {
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
+	subscribe = (f, type) => {
+		if (type && this.observers[type]) {
+			this.observers[type].push(f);
+		} else {
+			Object.keys(this.observers).forEach(key => this.observers[key].push(f));
 		}
-		const store = tx.objectStore('store');
+
+		return this;
+	}
+
+	unsubscribe = (f, type) => {
+		const _unsubscribe = (_f, _t) => {
+			this.observers[_t] = this.observers[_t].filter(subscriber => subscriber !== _f);
+		}
+		if (type && this.observers[type]) {
+			_unsubscribe(f, type);
+		} else {
+			Object.keys(this.observers).forEach(key => _unsubscribe(f, key));
+		}
+
+		return this;
+	}
+
+	notify = (data) => {
+		this.observers[data.type].forEach(f => f(data));
+	}
+
+	import = async (str) => {
+		const db = await this.dbPromise;
+		const tx = db.transaction(this.storeName, 'readwrite');
+		const allKeys = await tx.store.getAllKeys();
+		const data = JSON.parse(str);
 
 		// error if the entry is exist
-		JSON.parse(str).forEach(
-			entry => store.add(entry, (entry.parent || '') + entry.name)
-		);
+		data.forEach(entry => {
+			const key = (entry.parent || '') + entry.name;
+			if (allKeys.includes(key)) {
+				throw new KeyExistError(key);
+			}
+			tx.store.add(entry, key);
+		});
 
-		this.reload(tx);
+		await tx.done;
+	}
 
-		return tx.complete;
+	export = async (topKey) => {
+		const db = await this.dbPromise;
+		const tx = db.transaction(this.storeName);
+
+		const allKeys = (await tx.store.getAllKeys()).filter(
+			key => key.startsWith(topKey) || topKey.startsWith(key)
+		).sort();
+
+		const data = [];
+		for (const key of allKeys) {
+			data.push(await tx.store.get(key));
+		}
+
+		return data;
 	}
 
 	// Count the number of entries in DB
 	count = async () => {
 		const db = await this.dbPromise;
-		const tx = db.transaction('store', 'readonly');
-		const store = tx.objectStore('store');
-
-		return store.count();
+		const n = await db.count(this.storeName);
+		return n;
 	}
 
-	// Load, parse and cache DB content
-	load = async (transaction) => {
-		if (dbCache) {
-			return dbCache;
-		}
-		
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
-		const store = tx.objectStore('store');
-		
-		const rawData = await store.getAll();
-		
-		dbCache = this.parse(rawData);
-		
-		return dbCache;
-	}
-
-	// Force reload of the DB content
-	reload = async (transaction) => {
-		dbCache = undefined;
-		return this.load(transaction);
+	getAllKeys = async () => {
+		const db = await this.dbPromise;
+		const keys = await db.getAllKeys(this.storeName);
+		return keys;
 	}
 
 	getChildren = async (key) => {
 		const db = await this.dbPromise;
-		const tx = db.transaction('store', 'readwrite');
-		const store = tx.objectStore('store');
-		const index = store.index('parent');
+		const tx = db.transaction(this.storeName, 'readonly');
+		const index = tx.store.index('parent');
 		const val = await index.getAll(key);
-		
-		this.setDbBusy(false);
-		
+
 		val.sort((a, b) => {
 			return parseInt(a.offset, 16) - parseInt(b.offset, 16);
 		});
 		return val;
 	}
-	
-	get = async (key, transaction) => {
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
 
-		const data = await this.load(tx);
-		if (data.hasOwnProperty(key)) {
-			return data[key];
-		} else {
-			throw Error(`Entry ${key} doesn't exist`);
-		}
-	}
-
-	loadWithFilter = async (filter, transaction) => {
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
-
-		const data = await this.load(tx);
-
-		let result = [];
-		for (let elmKey in data) {
-			if (data.hasOwnProperty(elmKey) && filter(data[elmKey])) {
-				result[elmKey] = {
-					node: data[elmKey].node,
-					address: data[elmKey].address,
-					children: data[elmKey].children
-				};
-			}
-		}
-
-		for (let elmKey in result) {
-			result[elmKey].children = result[elmKey].children.filter(
-				childKey => result.hasOwnProperty(childKey)
-			).sort((keyA, keyB) => 
-				result[keyA].address - result[keyB].address
-			);
-		}
-
-		return result;
-	}
-
-	getSubTree = async (key, transaction) => {
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
-
-		const tree = await this.loadWithFilter((entry) => {
-			const entryKey = (entry.node.parent || '') + entry.node.name;
-			return entryKey.startsWith(key);
-		}, tx);
-
-		if (!tree.hasOwnProperty(key)) {
-			throw Error(`Entry ${key} doesn't exist`);
-		}
-
-		return tree;
-	}
-
-	getHierarchy = async (key, transaction) => {
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
-
-		const hierarchy = await this.loadWithFilter((entry) => {
-			const entryKey = (entry.node.parent || '') + entry.node.name;
-			return entryKey.startsWith(key) || key.startsWith(entryKey);
-		}, tx);
-
-		if (!hierarchy.hasOwnProperty(key)) {
-			throw Error(`Entry ${key} doesn't exist`);
-		}
-
-		return hierarchy;
-	}
-	
-	// Add new entry to DB, handle cache coherency and data integrity
-	add = async (data, transaction) => {
-		const key = data.parent + data.name;
-
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
-		const store = tx.objectStore('store');
-
-		// Check if the key is already exist
-		let exist = true;
-		try {
-			await this.get(key, tx);
-		} catch(error) {
-			exist = false;
-		}
-
-		if (exist) {
-			throw Error(`Entry ${key} already exist`);
-		}
+	getHierarchy = async () => {
+		const db = await this.dbPromise;
+		const tx = db.transaction(this.storeName);
+		const idx = tx.store.index("parent");
 		
-		// Update cache: attache to parent
-		const parent = dbCache[data.parent];
-		parent.children.push(key);
+		const _getHierarchy = async (key, name) => {
+			const nodes = await idx.getAll(key);
+			nodes.sort((a, b) => {
+				return parseInt(a.offset, 16) - parseInt(b.offset, 16);
+			});
 
-		// Update cache: add entry
-		dbCache[key] = {
-			node: data,
-			address: parent.address + parseInt(data.offset, 16),
-			children: []
-		};
+			const children = [];
 
-		// Update DB: commit the entry
-		store.add(data, key);
+			for (const node of nodes) {
+				const childKey = node.parent + node.name;
+				const subTree = await _getHierarchy(childKey, node.name);
+				children.push(subTree);
+			}
 
-		return tx.complete;
+			return {name, children};
+		}
+
+		const hierarchy = await _getHierarchy("/");
+		return hierarchy.children;
+	}
+	
+	get = async (key) => {
+		const db = await this.dbPromise;
+		const val = await db.get(this.storeName, key);
+		return val;
+	}
+	
+	// Add new entry to DB
+	add = async (data) => {
+		const key = data.parent + data.name;
+		const db = await this.dbPromise;
+		//await db.add(this.storeName, data, key);
+		const tx = db.transaction(this.storeName, 'readwrite');
+		if(await tx.store.getKey(key)) {
+			throw new KeyExistError(key);
+		}
+		tx.store.add(data, key);
+		await tx.done;
+
+		this.notify({
+			type: "add",
+			data: data,
+		});
 	}
 
-	// Updata props of an entry, handle cache coherency and data integrity
-	set = async (key, props, transaction) => {
+	// Updata (i.e. shallow merge) props of an entry
+	set = async (key, props) => {
 		if (key === '/') {
 			throw Error(`Root entry is readonly`);
 		}
 		
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
-		const store = tx.objectStore('store');
+		const db = await this.dbPromise;
+		const tx = db.transaction(this.storeName, 'readwrite');
+		
+		const value = await tx.store.get(key);
+		const newValue = {...value, ...props};
+		const newKey = newValue.parent + newValue.name;
 
-		let entry = await this.get(key, tx);
+		
+		if (key === newKey) { // no key change
+			tx.store.put(newValue, key);
+		} else { // needs to move all decendants
+			if (newKey.startsWith(key)) {
+				throw Error(`You cannot rename ${key} to ${newKey}`);
+			}
+			if(await tx.store.getKey(newKey)) {
+				throw new KeyExistError(newKey);
+			}
+			tx.store.delete(key);
+			tx.store.add(newValue, newKey);
 
-		// Find the new key
-		const newParent = props.parent || entry.node.parent;
-		const newName = props.name || entry.node.name;
-		const newKey = (newParent || '') + newName;
-
-		// New parent must exist
-		const newParentEntry = await this.get(newParent, tx);
-		const parentEntry = await this.get(entry.node.parent, tx);
-
-		// Cannot override an existing entry
-		if (newKey !== key && dbCache.hasOwnProperty(newKey)) {
-			throw Error(`Entry ${newKey} already exist`);
-		}
-
-		// Calculate address offset we should apply later
-		let offset = newParentEntry.address - parentEntry.address;
-		if (props.offset) {
-			offset += parseInt(props.offset, 16) - parseInt(entry.node.offset, 16);
-		}
-
-		// Update the entry, ignore the key change
-		const update = async (entry, props) => {
-			const node = entry.node;
-			const key  = (node.parent || '') + node.name;
-			
-			for (let name in props) {
-				if (props.hasOwnProperty(name) && name !== 'parent' && name !== 'name') {
-					node[name] = props[name];
+			// Iterate the DB, update `key` and `parent` of all descendants.
+			// FIXME: This might be expensive. Consider changing DB schema.
+			if (newKey.endsWith("/")) {
+				let cursor = await tx.store.openCursor();
+				while (cursor) {
+					if (cursor.key.startsWith(key)) {
+						tx.store.add({
+							...cursor.value,
+							parent: cursor.value.parent.replace(key, newKey)
+						}, cursor.key.replace(key, newKey));
+						cursor.delete();
+					}
+					cursor = await cursor.continue();
 				}
 			}
-
-			return store.put(node, key);
-		}
-
-		// Apply the key change only. This is EXTREMELY tricky.
-		const move = async(entry, dstKey) => {
-			const srcKey = entry.node.parent + entry.node.name;
-			const [dstParentKey, dstName] = splitKey(dstKey);
-
-			// Recursion: move all children
-			for (let i = 0; i < entry.children.length; i++) {
-				const childKey = entry.children[i];
-				const childEntry = dbCache[childKey];
-				const newKey = dstKey + childEntry.node.name;
-				await move(childEntry, newKey);
-			}
-
-			// Fix the cache
-			delete dbCache[srcKey];
-			entry.node.parent = dstParentKey;
-			entry.node.name   = dstName;
-			entry.children    = entry.children.map(
-				childKey =>	dstKey + childKey.slice(srcKey.length)
-			);
-			dbCache[dstKey] = entry;
-
-			// Update the DB
-			await store.delete(srcKey);
-			await store.put(entry.node, dstKey);
 		}		
+		
+		await tx.done;
 
-		await update(entry, props);
-
-		if (key !== newKey) {
-			await move(entry, newKey);
-			parentEntry.children.splice(parentEntry.children.indexOf(key), 1);
-			newParentEntry.children.push(newKey);
-		}
-
-		// Apply address offset introduced by the change
-		const applyOffset = (root, offset) => {
-			root.address += offset;
-			root.children.forEach(childKey => {
-				applyOffset(dbCache[childKey], offset);
-			});
-		};
-		if (offset) {
-			applyOffset(entry, offset);
-		}
-
-		return tx.complete;
+		this.notify({
+			type: "update",
+			oldData: value,
+			newData: newValue,
+		});
 	}
 	
-	// Recursively delete all entries under `key` (inclusive)
-	delete = async (key, transaction) => {
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
-		const store = tx.objectStore('store');
-
-		const entry = await this.get(key, tx);
-
-		let _delete = async (root) => {
-			for (let i = 0; i < root.children.length; i++) {
-				const child = await this.get(root.children[i], tx);
-				await _delete(child);
+	// Delete all entries under `key` (inclusive)
+	delete = async (key) => {
+		const db = await this.dbPromise;
+		const tx = db.transaction(this.storeName, 'readwrite');
+		
+		const deletedKeys = [];
+		let cursor = await tx.store.openCursor();
+		while (cursor) {
+			if (cursor.key.startsWith(key)) {
+				deletedKeys.push(cursor.key);
+				await cursor.delete();
 			}
+			cursor = await cursor.continue();
+		}
 
-			const rootKey = (root.node.parent || '') + root.node.name;
-			await store.delete(rootKey);
-			delete dbCache[rootKey];
-		}
-		
-		await _delete(entry);
-		
-		if (entry.node.parent) {
-			const parent = await this.get(entry.node.parent, tx);
-			parent.children.splice(parent.children.indexOf(key), 1);
-		}
-		
-		return tx.complete;
+		await tx.done;
+
+		this.notify({
+			type: "delete",
+			deletedKeys: deletedKeys,
+		});
 	}
 
 	// Delete everything except the root (i.e. '/').
-	reset = async (transaction) => {
-		let tx = transaction;
-		if (!tx) {
-			const db = await this.dbPromise;
-			tx = db.transaction('store', 'readwrite');
-		}
-		const store = tx.objectStore('store');
-
-		try {
-			await this.delete('/', tx);
-		} catch(error) {
-			// ignore - DB could be empty
-		}
-
-		const entry = {
-			name: '/',
-			offset: '0x00000000'
-		};
-		await store.put(entry, '/');
-
-		dbCache = [];
-		dbCache['/'] = {
-			node: entry,
-			address: 0,
-			children: []
-		};
-	}
+	// reset = async () => {
+	// 	const db = await this.dbPromise;
+	// 	const tx = db.transaction(this.storeName, 'readwrite');
+	// 	tx.store.clear();
+	// 	tx.store.add({name: '/', offset: '0'}, '/');
+	// 	await tx.done;
+	// }
 
 	parse = (rawData) => {
 		const data = rawData.reduce((prev, curr) => {
@@ -405,11 +283,24 @@ class RegDb {
 		};
 
 		parseAddress(data['/']);
-
 		return data;
 	}
 }
 
-export default RegDb;
+export class KeyExistError extends Error {
+	constructor(message) {
+	  super(message);
+	  this.name = 'KeyExist';
+	}
+}
 
-export let regDb = new RegDb();
+export class DbEmptyError extends Error {
+	constructor(message) {
+	  super(message);
+	  this.name = 'DbEmpty';
+	}
+}
+
+const regDb = new RegDb();
+
+export default regDb;

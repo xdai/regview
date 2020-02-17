@@ -3,22 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^1.2.15",
-    "@fortawesome/free-solid-svg-icons": "^5.7.2",
-    "@fortawesome/react-fontawesome": "^0.1.4",
-    "i": "^0.3.6",
-    "idb": "^3.0.2",
-    "npm": "^6.7.0",
-    "react": "^16.8.1",
-    "react-dom": "^16.8.1",
-    "react-router-dom": "^4.3.1",
-    "react-scripts": "^2.1.5"
+    "antd": "^4.0.2",
+    "idb": "^5.0.0",
+    "npm": "^6.14.2",
+    "patch-package": "^6.2.1",
+    "react": "^16.13.0",
+    "react-dom": "^16.13.0",
+    "react-scripts": "^2.1.8"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "postinstall": "patch-package"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -30,7 +28,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "@babel/core": "^7.2.2"
+    "@babel/core": "^7.8.7"
   },
   "homepage": "./"
 }

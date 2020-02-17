@@ -1,0 +1,25 @@
+diff --git a/node_modules/rc-field-form/es/useForm.js b/node_modules/rc-field-form/es/useForm.js
+index 9015175..7f535d9 100644
+--- a/node_modules/rc-field-form/es/useForm.js
++++ b/node_modules/rc-field-form/es/useForm.js
+@@ -519,7 +519,19 @@ export var FormStore = function FormStore(forceRootUpdate) {
+ 
+       var fieldNamePath = field.getNamePath(); // Add field validate rule in to promise list
+ 
+-      if (!provideNameList || containsNamePath(namePathList, fieldNamePath)) {
++      const _containsNamePath = (list, path) => {
++        return list && list.some(function (x) {
++          return _matchNamePath(x, path);
++        });
++      }
++
++      const _matchNamePath = (a, b) => {
++        if (!a || !b) return false;
++        if (a.length > b.length) return false;
++        return a.every((x, i) => x === b[i]);
++      }
++
++      if (!provideNameList || _containsNamePath(namePathList, fieldNamePath)) {
+         var promise = field.validateRules(_objectSpread({
+           validateMessages: _objectSpread({}, defaultValidateMessages, {}, _this.validateMessages)
+         }, options)); // Wrap promise with field

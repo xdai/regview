@@ -2,14 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import * as serviceWorker from './serviceWorker';
 
-import { HashRouter as Router } from "react-router-dom";
-
-import Regview from './components/Regview';
+import App from './App';
 import './index.css';
 
 // React Entry
 ReactDOM.render(
-	<Router><Regview /></Router>,
+	<App />,
 	document.getElementById('root')
 );
 

@@ -1,44 +1,44 @@
-/*
- * Picker button container
- */
+.data-source-container {
+	margin-top: 80px;
+	display: flex;
+	justify-content: center;
+	align-content: center;
+}
+
 .data-source {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  left: 0;
-  margin: auto;
-  width: 650px;
-  height: 200px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-column-gap: 50px;
+	width: 560px;
 }
 
-/*
- * Data picker buttons
- */
-.data-source .data-picker {
-  font-size: 1.25em;
-  font-weight: 700;
-  color: white;
-
-  height: 200px;
-  width: 300px;
-  border-radius: 4px;
-
-  text-align: center;
-  line-height: 200px;
-
-  background-color: #fc913a;
-  display: inline-block;
-  cursor: pointer;
+.data-picker-container {
+	width: 100%;
 }
 
-.data-source .data-picker:hover {
-	background-color: #ff4e50;
+.data-picker {
+	font-size: 16px;
+	color: rgba(0, 0, 0, 0.85);
+  
+	width: 100%;
+
+	background-color: rgb(250, 250, 250);
+	border: 1px dashed rgb(217, 217, 217);
+	border-radius: 2px;
+  
+	text-align: center;
+  
+	display: inline-block;
+	cursor: pointer;
 }
 
-.data-source .data-picker input {
+.data-picker:hover {
+	border-color: #40a9ff; 
+}
+
+.data-picker input {
 	display: none;
+}
+
+.data-picker-icon {
+	font-size: 3rem;
+	color: #40a9ff;
+	margin-bottom: 20px;
 }
