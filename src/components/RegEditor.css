@@ -1,98 +1,3 @@
-.reg-editor {
-	margin: 10px auto;
-	display: grid;
-	grid-gap: 10px;
-	grid-template-columns: 70px 200px 50px 300px;
-	grid-template-rows: auto;
-	grid-template-areas: 
-		"reg-name-label    reg-name-input    reg-group-label   reg-group-input"
-		"reg-offset-label  reg-offset-input  reg-size-label    reg-size-input"
-		"reg-summary-label reg-summary-input reg-summary-input reg-summary-input"
-		"reg-detail-label  reg-detail-area   reg-detail-area   reg-detail-area"
-		"field-editor      field-editor      field-editor      field-editor";
-}
-
-.reg-editor [name="name-label"] {
-	grid-area: reg-name-label;
-}
-
-.reg-editor [name="name"] {
-	grid-area: reg-name-input;
-}
-
-.reg-editor [name="parent-label"] {
-	grid-area: reg-group-label;
-}
-
-.reg-editor [name="parent"] {
-	grid-area: reg-group-input;
-}
-
-.reg-editor [name="desc-short-label"] {
-	grid-area: reg-summary-label;
-}
-
-.reg-editor [name="desc_short"] {
-	grid-area: reg-summary-input;
-}
-
-.reg-editor [name="desc-long-label"] {
-	grid-area: reg-detail-label;
-}
-
-.reg-editor [name="desc_long"] {
-	grid-area: reg-detail-area;
-	height: 100px;
-}
-
-.field-editor {
-	grid-area: field-editor;
-}
-
-.field-form {
-	margin: 10px;
-	display: grid;
-	grid-gap: 10px 10px;
-	grid-template-columns: 140px auto;
-}
-
-.field-form textarea {
-	height: 100px;
-}
-
-.field-form .field-btns {
-	grid-column: 1/3;
-	width: 100%;
-	display: grid;
-	grid-gap: 10px;
-	grid-template-columns: 1fr repeat(3, 120px) 1fr;
-}
-
-.field-form button[name="field-submit-btn"] {
-	grid-column: 2;
-}
-
-.field-form button[name="field-cancel-btn"] {
-	grid-column: 3;
-}
-
-.field-form button[name="field-delete-btn"] {
-	grid-column: 4;
-}
-
-div.bit {
-	background-color: #fff;
-	cursor: pointer;
-}
-
-div.bit.active-adding {
-	background-color: #deff97;
-}
-
-div.bit.active-updating {
-	background-color: #ffb3ba;
-}
-
 table.symbolic-names {
 	table-layout: fixed;
 	border-collapse: collapse;
@@ -102,4 +7,41 @@ table.symbolic-names {
 table.symbolic-names th, table.symbolic-names td {
 	padding: 5px;
 	text-align: left;
+}
+
+#reset-btn {
+	margin-right: 16px;
+}
+
+.field-editor {
+	padding-bottom: 8px;
+	margin-bottom: 24px;
+}
+
+#constant-left {
+	width: 100px;
+	text-align: center;
+}
+
+#constant-middle {
+	background-color: #fff;
+	width: 30px;
+	border-left: 0;
+	border-right: 0;
+	pointer-events:none;
+}
+
+#constant-right {
+	width: 100px;
+	text-align: center;
+	border-left-width: 0;
+}
+
+#constant-right:hover {
+	border-left-width: 1px;
+}
+
+.constant-error {
+	margin-left: 8px;
+	line-height: 32px;
 }

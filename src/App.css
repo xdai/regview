@@ -1,0 +1,16 @@
+@import '~antd/dist/antd.css';
+
+.app {
+    width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.app .content {
+    padding: 1rem 0
+}
+
+#changelog {
+    font-size: 0.8rem;
+    padding-left: 8px;
+}

@@ -1,9 +1,3 @@
-import React, { Component } from 'react';
-import { Redirect } from "react-router-dom";
-
-import { regDb } from '../RegDb';
-import { Warning, Keyword } from './Form';
-
 export function str2hex(s) {
 	return parseInt(s, 16);
 }
@@ -12,22 +6,40 @@ export function num2hexstr(n) {
 	return "0x" + ("00000000" + n.toString(16)).toUpperCase().substr(-8);
 }
 
-export function parseIntStr(s) {
-	if (s.match(/^\s*\d+\s*$/) ||
-		s.match(/^\s*0[0-7]+\s*$/) ||
-		s.match(/^\s*0x[0-9a-f]+\s*$/i)) {
-		return parseInt(s);
+export function isNumberString(s) {
+	if (typeof s === "number") {
+		return true;
 	}
-	else {
-		return NaN;
-	}
+
+	const _s = s.trim();
+	return !!(
+		_s.match(/^[1-9]\d*$/)     || // decimal, e.g. "128"
+		_s.match(/^0[0-7]*$/)      || // octal, e.g. "073"
+		_s.match(/^0x[0-9a-f]+$/i) || // hex, e.g. "0x07"
+		_s.match(/^[0-9a-f]+h$/i)  || // hex, e.g. "07h"
+		_s.match(/^0b[01]+$/i)        // binary, e.g. "0b1011"
+	);
 }
 
-export function getCoordinate(offset, width) {
-	const row = Math.floor(offset / width) + 1;
-	const col = width - offset % width;
+export function parseNumberString(s) {
+	if (typeof s === "number") {
+		return s;
+	}
 
-	return [row, col];
+	const _s = s.trim();
+	if (_s.match(/^[1-9]\d*$/)) {  // decimal
+		return parseInt(_s, 10);
+	} else if (_s.match(/^0[0-7]*$/)) { // octal
+		return parseInt(_s, 8);
+	} else if (_s.match(/^0x[0-9a-f]+$/i)) { // hex, e.g. "0x07"
+		return parseInt(_s, 16);
+	} else if (_s.match(/^[0-9a-f]+h$/i)) { // hex, e.g. "07h"
+		return parseInt(_s.slice(0, -1), 16);
+	} else if (_s.match(/^0b[01]+$/i)) { // binary, e.g. "0b1011"
+		return _s.slice(2).split("").reduce((acc, cur) => (acc << 1) | cur, 0);
+	} else {
+		return NaN;
+	}
 }
 
 export function isInRange(n, range) {
@@ -44,105 +56,4 @@ export function splitKey(key) {
 	}
 
 	return key.match(/^(.*\/)(.+)$/).slice(1, 3);
-}
-
-export function parsePath(path) {
-	const m = path.match(/^(\/new\/group|\/new\/register|\/view|\/edit)(\/.*)*/);
-	if (!m) {
-		throw Error(`Unrecognized path: ${path}`);
-	}
-	const [op, key] = m.slice(1,3);
-	return [op, key || '/'];
-}
-
-export function withReload(WrappedComponent) {
-	return class extends Component {
-		constructor(props) {
-			super(props);
-
-			this.state = {
-				op: undefined,
-				path: undefined,
-				data: undefined,
-				error: undefined
-			};
-		}
-
-		load = async () => {
-			const [op, path] = parsePath(this.props.location.pathname);
-
-			try {
-				const data = await this.loadContent(op, path);
-				this.setState({
-					op: op,
-					path: path,
-					data: data,
-					error: undefined
-				});
-			} catch(error) {
-				const n = await regDb.count();
-
-				if (n === 0) {
-					this.setState({
-						op: op,
-						path: path,
-						data: undefined,
-						error: 'db-empty'
-					});
-				} else {
-					this.setState({
-						op: op,
-						path: path,
-						data: undefined,
-						error: 'load-failure'
-					});
-				}
-			}
-		}
-
-		loadContent = async (op, path) => {
-			switch (op) {
-			case '/view':
-				if (path.endsWith('/')) {
-					return regDb.getSubTree(path);
-				} else {
-					return regDb.get(path);
-				}
-			case '/edit':
-			case '/new/group':
-			case '/new/register':
-				return regDb.get(path);
-			default:
-				break;
-			}
-		}
-		
-		componentDidMount() {
-			this.load();
-		}
-
-		componentDidUpdate(prevProps) {
-			if (this.props.location.pathname !== prevProps.location.pathname) {
-				this.load(); // re-load on route change
-			}
-		}
-
-		render() {
-			if (this.state.error) { // error
-				if (this.state.error === 'db-empty') {
-					return <Redirect to="/import" />;
-				} else {
-					return (
-						<Warning>
-							Entry <Keyword>{this.state.path}</Keyword> doesn't exist
-						</Warning>
-					)
-				}
-			} else if (this.state.data === undefined) { // loading
-				return null;
-			}  else { // loaded
-				return <WrappedComponent op={this.state.op} path={this.state.path} data={this.state.data} {...this.props} />;
-			}
-		}
-	};
 }

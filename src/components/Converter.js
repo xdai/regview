@@ -39,12 +39,7 @@ let forEachRegister = (data, rootKey, func) => {
 }
 
 let convertToJson = (data) => {
-    const obj = [];
-    for (let key in data) {
-        obj.push(data[key].node);
-    }
-
-    return JSON.stringify(obj, null, 2);
+    return JSON.stringify(data, null, 2);
 }
 
 let convertToMacro = (data) => {
@@ -1372,32 +1367,32 @@ let convertToCppIndirectAccess = (data) => {
     return result;
 }
 
-export let convertTo = (data, format) => {
-    const converter = {
-        json: {
-            handle: convertToJson,
-            descripton: 'JSON'
-        } ,
-        macro: {
-            handle: convertToMacro,
-            descripton: 'C/C++ Macro'
-        },
-        template: {
-            handle: convertToTemplate,
-            descripton: 'C++ Template'
-        },
-        'C++': {
-            handle: convertToCpp,
-            description: 'C++'
-        },
-        'C++Indirect': {
-            handle: convertToCppIndirectAccess,
-            description: 'C++ Indirect'
-        }
-    }[format];
+const Converter = [
+    {
+        handle: convertToJson,
+        description: 'JSON',
+        extension: '.json',
+    },
+    {
+        handle: convertToCpp,
+        description: 'C++',
+        extension: '.h',
+    },
+    {
+        handle: convertToMacro,
+        description: 'C/C++ Macro',
+        extension: '.h',
+    },
+    {
+        handle: convertToTemplate,
+        description: 'C++ Template',
+        extension: '.h',
+    },
+    {
+        handle: convertToCppIndirectAccess,
+        description: 'C++ Indirect',
+        extension: '.h',
+    },
+];
 
-    return ({
-        data: converter.handle(data),
-        descripton: converter.descripton
-    });
-}
+export default Converter;
