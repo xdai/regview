@@ -7,6 +7,10 @@ export function num2hexstr(n) {
 }
 
 export function isNumberString(s) {
+	if (typeof s === "number") {
+		return true;
+	}
+
 	const _s = s.trim();
 	return !!(
 		_s.match(/^[1-9]\d*$/)     || // decimal, e.g. "128"
@@ -18,6 +22,10 @@ export function isNumberString(s) {
 }
 
 export function parseNumberString(s) {
+	if (typeof s === "number") {
+		return s;
+	}
+
 	const _s = s.trim();
 	if (_s.match(/^[1-9]\d*$/)) {  // decimal
 		return parseInt(_s, 10);
