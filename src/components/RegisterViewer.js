@@ -86,10 +86,10 @@ function Viewer({data}) {
 					<FieldTable fields={fields}/>
 				</Tabs.TabPane>
 				<Tabs.TabPane tab="Encoder" key="2">
-					<EncoderTable fields={fields}/>
+					<EncoderTable path={data.parent + data.name} fields={fields}/>
 				</Tabs.TabPane>
 				<Tabs.TabPane tab="Decoder" key="3">
-					<DecoderTable fields={fields}/>
+					<DecoderTable path={data.parent + data.name} fields={fields}/>
 				</Tabs.TabPane>
 			</Tabs>
 			
@@ -230,31 +230,47 @@ function Code(props) {
 	return <Typography.Text code>{props.children}</Typography.Text>
 }
 
-function EncoderTable({fields}) {
+function EncoderTable({path, fields}) {
 	const [form] = Form.useForm();
-	const [source, setSource] = useState([]);
+	const [dataMap, setDataMap] = useState({});
 	const [sequence, setSequence] = useState(0);
 
 	useEffect(() => {
-		setSource([]);
-	}, [fields])
+		if (!dataMap.hasOwnProperty(path)) {
+			dataMap[path] = [];
+		}
+	}, [path])
 	
 	const handleAdd = () => {
-		setSource([
-			...source, 
-			{
-				key: sequence,
-				idx: sequence,
+		setDataMap({
+			...dataMap,
+			[path]: [
+				...dataMap[path],
+				{
+					key: sequence,
+					idx: sequence,
+				}
+			],
+		});
+		form.setFieldsValue({
+			[path]: {
+				[sequence]: {
+					...fields.map((field) => ({["_"+field.name] : 0})),
+					value: 0,
+				}
 			}
-		]);
+		});
 		setSequence(sequence + 1);
-	}
+	};
 
 	const handleRemove = (idx) => {
-		setSource(source.filter(x => x.idx !== idx));
+		setDataMap({
+			...dataMap,
+			[path]: dataMap[path].filter(x => x.idx !== idx),
+		});
 		const {[idx]:_, ...values} = form.getFieldsValue();
 		form.setFieldsValue(values);
-	}
+	};
 	
 	const DeleteBtn = ({index}) => (
 		<Button type="link" icon={<DeleteOutlined />} onClick={()=>handleRemove(index)}/>
@@ -264,6 +280,7 @@ function EncoderTable({fields}) {
 		key: "value",
 		title: <NumberOutlined />,
 		onCell: (record) => ({
+			path: path,
 			fields: fields,
 			index: record.idx,
 			name: "value",
@@ -273,6 +290,7 @@ function EncoderTable({fields}) {
 		key: i,
 		title: field.name,
 		onCell: (record) => ({
+			path: path,
 			fields: fields,
 			index: record.idx,
 			name: "_"+field.name,
@@ -289,7 +307,7 @@ function EncoderTable({fields}) {
 		<Button onClick={handleAdd}>Add Row</Button>
 		<Form form={form}>
 			<Table
-				dataSource={source}
+				dataSource={dataMap[path]}
 				columns={columns}
 				components={{
 					body: {
@@ -316,17 +334,19 @@ function EncoderTable({fields}) {
 }
 
 function EncoderCell(props) {
-	const {fields, index, name, form, children, ...rest} = props;
+	const {path, fields, index, name, form, children, ...rest} = props;
 	
 	const updateRow = (values) => {
-		const row = form.getFieldValue([index]);
+		const row = form.getFieldValue([path, index]);
 		form.setFieldsValue({
-			[index]: {row, ...values},
+			[path]: {
+				[index]: {row, ...values},
+			}
 		});
 	}
 	
 	const onValueChange = (e) => {
-		const row = form.getFieldValue([index]);
+		const row = form.getFieldValue([path, index]);
 		const value = parseNumberString("0x"+row["value"]) || 0;
 		updateRow(fields.reduce((acc, cur) => {
 			const shift = cur.bits[0];
@@ -338,7 +358,7 @@ function EncoderCell(props) {
 	}
 	
 	const onFieldChange = (e) => {
-		const row = form.getFieldValue([index]);
+		const row = form.getFieldValue([path, index]);
 		updateRow({
 			value: fields.reduce((acc, cur) => {
 				const shift = cur.bits[0];
@@ -371,12 +391,15 @@ function EncoderCell(props) {
 	});
 	
 	const content = form ? (
-		<Form.Item name={[index, name]} style={{margin: 0,}}>
+		<Form.Item name={[path, index, name]} style={{margin: 0,}}>
 			<AutoComplete 
 				options={getOptions()} 
 				onChange={name === "value" ? onValueChange : onFieldChange}
 			>
-				<Input addonBefore={name === "value" ? "0x" : ""}/>
+				<Input 
+					addonBefore={name === "value" ? "0x" : ""}
+					style={name === "value" ? {width: "140px"} : {}}
+				/>
 			</AutoComplete>
 		</Form.Item>
 	) : children;
@@ -384,20 +407,23 @@ function EncoderCell(props) {
 	return <td {...rest}>{content}</td>;
 }
 
-function DecoderTable({fields}) {
+function DecoderTable({path, fields}) {
 	const [form] = Form.useForm();
-	const [source, setSource] = useState([]);
-	const [pin, setPin] = useState(0);
+	const [dataMap, setDataMap] = useState({});
 	const [otherIdx, setOtherIdx] = useState(NaN);
-	const [showHex, setShowHex] = useState(fields.reduce((acc, cur) => {
-		return {...acc, [cur.name]: false};
-	}, {}));
 
 	useEffect(() => {
-		setSource([]);
-		setPin(0);
+		if (!dataMap.hasOwnProperty(path)) {
+			dataMap[path] = {
+				source: [],
+				pin: 0,
+				showHex: fields.reduce((acc, cur) => {
+					return {...acc, [cur.name]: false};
+				}, {})
+			}
+		}
 		setOtherIdx(NaN);
-	}, [fields])
+	}, [path])
 
 	const constants = fields.reduce((acc, cur) => {
 		return {...acc, [cur.name]: cur.value};
@@ -411,28 +437,57 @@ function DecoderTable({fields}) {
 	
 	const handleAddValue = ({value}) => {
 		form.resetFields();
-		console.log(decodeValue(parseInt(value, 16)))
-		setSource([
-			...source, 
-			{
-				key: source.length,
-				value: value,
-				...decodeValue(parseInt(value, 16)),
+		setDataMap({
+			...dataMap,
+			[path]: {
+				...dataMap[path],
+				source: [
+					...dataMap[path].source,
+					{
+						key: dataMap[path].source.length,
+						value: value,
+						...decodeValue(parseInt(value, 16)),
+					}
+				]
 			}
-		]);
-	}
+		});
+	};
 
 	const handleRemoveValue = (e, idx) => {
 		e.stopPropagation(); // so we don't trigger `onClick` of the row
-		setPin(pin < idx ? pin : Math.max(0, pin - 1));
 		setOtherIdx(NaN);
-		setSource(
-			source.filter((_,i)=>i!==idx).map((x, i) => ({
-				...x,
-				key: i,
-			}))
-		);
-	}
+		setDataMap({
+			...dataMap,
+			[path]: {
+				...dataMap[path],
+				source: dataMap[path].source.filter((_,i)=>i!==idx).map(
+					// reassign the key to fill the hole
+					(x, i) => ({...x, key: i,})
+				),
+				pin: dataMap[path].pin < idx ? dataMap[path].pin : Math.max(0, dataMap[path].pin - 1)
+			}
+		});
+	};
+
+	const setPin = (idx) => {
+		setDataMap({
+			...dataMap,
+			[path]: {
+				...dataMap[path],
+				pin: idx,
+			}
+		});
+	};
+
+	const setShowHex = (showHex) => {
+		setDataMap({
+			...dataMap,
+			[path]: {
+				...dataMap[path],
+				showHex: showHex,
+			}
+		});
+	};
 
 	const AddValueForm = () => (
 		<Form form={form} layout="inline" onFinish={handleAddValue}>
@@ -458,7 +513,7 @@ function DecoderTable({fields}) {
 	);
 
 	const PushPin = ({index}) => (
-		index === pin && <PushpinTwoTone twoToneColor="#f50"/>
+		dataMap[path] && index === dataMap[path].pin && <PushpinTwoTone twoToneColor="#f50"/>
 	);
 	
 	const DeleteBtn = ({index}) => (
@@ -466,8 +521,10 @@ function DecoderTable({fields}) {
 	);
 
 	const Field = ({index, name, value}) => {
-		const key = "_" + name;
-		const hex = showHex[name];
+		const key    = "_" + name;
+		const hex    = dataMap[path].showHex[name];
+		const source = dataMap[path].source;
+		const pin    = dataMap[path].pin;
 		const showBadge = (
 			!isNaN(otherIdx) &&
 			(index === pin || index === otherIdx) &&
@@ -520,11 +577,15 @@ function DecoderTable({fields}) {
 		<tr>
 			<th colSpan={2} style={{padding: "8px"}}>Show Hex</th>
 			{fields.map((field, i) => (<td key={i} style={{padding: "8px"}}>
-				<Checkbox onChange={(e)=>{
-					const v = {...showHex};
-					v[field.name] = e.target.checked;
-					setShowHex(v)
-				}}/>
+				<Checkbox 
+					onChange={(e)=>{
+						setShowHex({
+							...dataMap[path].showHex,
+							[field.name]: e.target.checked
+						})
+					}}
+					checked={dataMap[path] && dataMap[path].showHex[field.name]}
+				/>
 			</td>))}
 			<td/>
 		</tr>
@@ -533,7 +594,7 @@ function DecoderTable({fields}) {
 	return (<>
 		<AddValueForm/>
 		<Table
-			dataSource={source}
+			dataSource={dataMap[path] && dataMap[path].source}
 			columns={columns}
 			summary={summary}
 			pagination={false}
