@@ -7,8 +7,6 @@ import GroupSelect from './GroupSelect';
 import Converter from './Converter';
 import { splitKey } from './Utils';
 
-import regDb from '../RegDb';
-
 export default function Exporter(props) {
     const {form, onFinish} = props;
 
@@ -32,8 +30,8 @@ export default function Exporter(props) {
         }
         filename += Converter[format].extension;
 
-        const data = await regDb.export(source);
-        saveAs(Converter[format].handle(data), filename)
+        const data = await Converter[format].handle(source);
+        saveAs(data, filename)
         onFinish();
     }
 
