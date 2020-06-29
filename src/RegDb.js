@@ -62,15 +62,16 @@ class RegDb {
 		const db = await this.dbPromise;
 		const tx = db.transaction(this.storeName, 'readwrite');
 		const allKeys = await tx.store.getAllKeys();
-		const data = JSON.parse(str).filter(entry => entry.name !== "/");
+		const data = JSON.parse(str);
 
 		// error if the entry is exist
 		data.forEach(entry => {
 			const key = (entry.parent || '') + entry.name;
-			if (allKeys.includes(key)) {
+			if (!allKeys.includes(key)) {
+				tx.store.add(entry, key);
+			} else if (key !== "/") {
 				throw new KeyExistError(key);
 			}
-			tx.store.add(entry, key);
 		});
 
 		await tx.done;
