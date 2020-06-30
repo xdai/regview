@@ -436,11 +436,11 @@ let convertToCpp = async (source) => {
     result += `    /**\n`;
     result += `     * @brief Declare Address\n`;
     result += `     */\n`;
-    result += `    static const uintptr_t g_DeclareAddress = 0;\n`;
+    result += `    static constexpr uintptr_t g_DeclareAddress = 0;\n`;
     result += `    /**\n`;
     result += `     * @brief Runtime Address\n`;
     result += `     */\n`;
-    result += `    static const uintptr_t g_RuntimeAddress = 0;\n`;
+    result += `    static constexpr uintptr_t g_RuntimeAddress = 0;\n`;
     result += `\n`;
     data['/'].children.forEach((path) => {
         result += `    class ${getClasslName(path)};\n`;
@@ -485,17 +485,17 @@ let convertToCpp = async (source) => {
     result += `\n`;
     result += `    template <uint8_t L, uint8_t H, typename T>\n`
 	result += `    struct Field_ {\n`
-    result += `        static const uint8_t low   = L;\n`;
-    result += `        static const uint8_t high  = H;\n`;
+    result += `        static constexpr uint8_t low   = L;\n`;
+    result += `        static constexpr uint8_t high  = H;\n`;
     result += `\n`;
     result += `        NN_STATIC_ASSERT(low <= high);\n`;
     result += `        NN_STATIC_ASSERT(std::is_integral<T>::value);\n`;
     result += `        NN_STATIC_ASSERT(high < sizeof(T) * 8);\n`;
     result += `\n`;
-    result += `        static const uint8_t shift = low;\n`;
-    result += `        static const uint8_t size  = high - low + 1;\n`;
+    result += `        static constexpr uint8_t shift = low;\n`;
+    result += `        static constexpr uint8_t size  = high - low + 1;\n`;
     result += `\n`;
-    result += `        static const T mask = (size == sizeof(T) * 8) ? (~T{0}) : (((T{1} << size) - 1) << shift);\n`;
+    result += `        static constexpr T mask = (size == sizeof(T) * 8) ? (~T{0}) : (((T{1} << size) - 1) << shift);\n`;
     result += `\n`;
     result += `        typedef typename BaseTypeOfBits_<size>::value ValueType;\n`
     result += `    };\n`
@@ -511,7 +511,7 @@ let convertToCpp = async (source) => {
         result += `     *   -# runtime address of its parent\n`;
         result += `     *   -# declare offset of itself\n`;
         result += `     */\n`;
-        result += `    static inline ${getClasslName(path)} ${getFactoryName(path)}() NN_NOEXCEPT;\n`;
+        result += `    static auto ${getFactoryName(path)}() NN_NOEXCEPT;\n`;
         result += `\n`;
         result += `    /**\n`;
         result += `     * @brief Factory method to create an instance of ${path}\n`;
@@ -522,7 +522,7 @@ let convertToCpp = async (source) => {
         result += `     *   - Offset\n`;
         result += `     */\n`;
         result += `    template <typename AddressPolicy>\n`;
-        result += `    static inline ${getClasslName(path)} ${getFactoryName(path)}(uintptr_t) NN_NOEXCEPT;\n`;
+        result += `    static auto ${getFactoryName(path)}(uintptr_t) NN_NOEXCEPT;\n`;
         
     });
     result += `};\n`;
@@ -552,17 +552,17 @@ let convertToCpp = async (source) => {
         result += `    /**\n`;
         result += `     * @brief Declared Base Address\n`;
         result += `     */\n`;
-        result += `    static const uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
+        result += `    static constexpr uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
         result += `\n`;
         result += `    /**\n`;
         result += `     * @brief Declared Address Offset\n`;
         result += `     */\n`;
-        result += `    static const uintptr_t g_DeclareOffset  = ${offset};\n`;
+        result += `    static constexpr uintptr_t g_DeclareOffset  = ${offset};\n`;
         result += `\n`;
         result += `    /**\n`;
         result += `     * @brief Declared Address\n`;
         result += `     */\n`;
-        result += `    static const uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
+        result += `    static constexpr uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
         result += `\n`;
         children.forEach((path) => {
             result += `    class ${getClasslName(path)};\n`;
@@ -592,7 +592,7 @@ let convertToCpp = async (source) => {
             result += `     *   -# runtime address of its parent\n`;
             result += `     *   -# declare offset of itself\n`;
             result += `     */\n`;
-            result += `    inline ${getClasslName(path)} ${getFactoryName(path)}() const NN_NOEXCEPT;\n`;
+            result += `    auto ${getFactoryName(path)}() const NN_NOEXCEPT;\n`;
             result += `\n`;
             result += `    /**\n`;
             result += `     * @brief Factory method to create an instance of ${path}\n`;
@@ -603,7 +603,7 @@ let convertToCpp = async (source) => {
             result += `     *   - Offset\n`;
             result += `     */\n`;
             result += `    template <typename AddressPolicy>\n`;
-            result += `    inline ${getClasslName(path)} ${getFactoryName(path)}(uintptr_t n) const NN_NOEXCEPT;\n`;
+            result += `    auto ${getFactoryName(path)}(uintptr_t) const NN_NOEXCEPT;\n`;
         });
         
         result += `};\n`;
@@ -631,22 +631,22 @@ let convertToCpp = async (source) => {
         result += `    /**\n`;
         result += `     * @brief Declared Base Address\n`;
         result += `     */\n`;
-        result += `    static const uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
+        result += `    static constexpr uintptr_t g_DeclareBase    = ${enclosingName}::g_DeclareAddress;\n`;
         result += `\n`;
         result += `    /**\n`;
         result += `     * @brief Declared Address Offset\n`;
         result += `     */\n`;
-        result += `    static const uintptr_t g_DeclareOffset  = ${offset};\n`;
+        result += `    static constexpr uintptr_t g_DeclareOffset  = ${offset};\n`;
         result += `\n`;
         result += `    /**\n`;
         result += `     * @brief Declared Address\n`;
         result += `     */\n`;
-        result += `    static const uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
+        result += `    static constexpr uintptr_t g_DeclareAddress = g_DeclareBase + g_DeclareOffset;\n`;
         result += `\n`;
         result += `    /**\n`;
         result += `     * @brief Size of this register in bytes\n`;
         result += `     */\n`;
-        result += `    static const size_t    g_Size           = ${node.size};\n`;
+        result += `    static constexpr size_t    g_Size           = ${node.size};\n`;
         result += `\n`;
         result += `    /**\n`;
         result += `     * @brief Smallest integer type that can hold the value of this register\n`;
@@ -690,23 +690,28 @@ let convertToCpp = async (source) => {
         result += `    /**\n`;
         result += `     * @brief Read register value to memory\n`;
         result += `     */\n`;
-        result += `    inline Data_ Get() const NN_NOEXCEPT;\n`;
+        result += `    auto Get() const NN_NOEXCEPT;\n`;
         result += `\n`;
         result += `    /**\n`;
         result += `     * @brief Write a value from memory to register\n`;
         result += `     * @param[in] value The value to be written\n`;
         result += `     */\n`;
-        result += `    inline void  Set(ValueType_ value) NN_NOEXCEPT;\n`;
+        result += `    void Set(ValueType_ value) NN_NOEXCEPT;\n`;
+        result += `\n`;
+        result += `    /**\n`;
+        result += `     * @brief Fabricate a register reading from given value\n`;
+        result += `     * @param[in] value The value to fabricate the reading from\n`;
+        result += `     */\n`;
+        result += `    auto Fab(ValueType_ value = 0) const NN_NOEXCEPT;\n`;
         result += `};\n`;
 
         result += `\n`;
         result += `/**\n`;
-        result += ` * @brief In memory value type for register ${node.parent  + node.name}\n`;
+        result += ` * @brief In-memory value type for register ${node.parent  + node.name}\n`;
         result += ` * @details\n`;
-        result += ` *   This class is the in memory reprensentation of the register value.\n`;
+        result += ` *   This class is the in-memory reprensentation of the register value.\n`;
         result += ` *   It provides accessors to read / write the fields of the register. Those\n`;
-        result += ` *   accessors affect only the in memory copy of the register value.\n`;
-        result += ` *   value.\n`;
+        result += ` *   accessors affect only the in-memory copy of the register value.\n`;
         result += ` */\n`;
         result += `class ${enclosingName}::${className}::Data_ {\n`;
         result += `private:\n`;
@@ -736,12 +741,12 @@ let convertToCpp = async (source) => {
             result += `    /**\n`;
             result += `     * @brief Read the ${field.name} field\n`;
             result += `     */\n`;
-            result += `    inline ${valueType} ${fieldName}() const NN_NOEXCEPT;\n`;
+            result += `    auto ${fieldName}() const NN_NOEXCEPT;\n`;
             result += `\n`;
             result += `    /**\n`;
             result += `     * @brief Write the ${field.name} field\n`;
             result += `     */\n`;
-            result += `    inline Data_& ${fieldName}(${valueType} value) NN_NOEXCEPT;\n`
+            result += `    auto& ${fieldName}(${valueType} value) NN_NOEXCEPT;\n`
         });
         result += `};\n`;
     });
@@ -765,21 +770,21 @@ let convertToCpp = async (source) => {
             result += ` * ${path}: Factory methods\n`;
             result += ` */\n`;
             result += `\n`;
-            result += `inline ${classNameLong}\n`
+            result += `inline auto\n`
             result += `${enclosingName}::${factoryName}() ${constNess} NN_NOEXCEPT\n`;
             result += `{\n`;
             result += `    return ${className}(${runtimeAddress} + ${className}::g_DeclareOffset);\n`
             result += `}\n`;
             result += `\n`;
             result += `template <>\n`;
-            result += `inline ${classNameLong}\n`
+            result += `inline auto\n`
             result += `${enclosingName}::${factoryName}<At>(uintptr_t address) ${constNess} NN_NOEXCEPT\n`;
             result += `{\n`;
             result += `    return ${className}(address);\n`
             result += `}\n`;
             result += `\n`;
             result += `template <>\n`;
-            result += `inline ${classNameLong}\n`
+            result += `inline auto\n`
             result += `${enclosingName}::${factoryName}<Offset>(uintptr_t offset) ${constNess} NN_NOEXCEPT\n`;
             result += `{\n`;
             result += `    return ${className}(${runtimeAddress} + ${className}::g_DeclareOffset + offset);\n`
@@ -793,7 +798,7 @@ let convertToCpp = async (source) => {
         result += `/*\n`;
         result += ` * ${node.parent + node.name}: Getter\n`;
         result += ` */\n`;
-        result += `inline ${enclosingName}::Data_\n`;
+        result += `inline auto\n`;
         result += `${enclosingName}::Get() const NN_NOEXCEPT\n`;
         result += `{\n`;
         result += `    return Data_(*(volatile ValueType_*)m_RuntimeAddress);\n`
@@ -809,6 +814,16 @@ let convertToCpp = async (source) => {
         result += `    *(volatile ValueType_*)m_RuntimeAddress = value;\n`
         result += `}\n`;
 
+        result += `\n`;
+        result += `/*\n`;
+        result += ` * ${node.parent + node.name}: Fabricator\n`;
+        result += ` */\n`;
+        result += `inline auto\n`;
+        result += `${enclosingName}::Fab(ValueType_ value) const NN_NOEXCEPT\n`;
+        result += `{\n`;
+        result += `    return Data_(value);\n`
+        result += `}\n`;
+
         node.fields.forEach((field) => {
             const methodName = siglofyName(field.name);
             const className  = `${classifyName(field.name)}_`;
@@ -820,14 +835,14 @@ let convertToCpp = async (source) => {
             result += ` *   [${field.bits[0]}, ${field.bits[1]}]: ${field.name} - ${field.meaning}\n`;
             result += ` */\n`;
             result += `\n`;
-            result += `inline ${enclosingName}::${valueType}\n`;
+            result += `inline auto\n`;
             result += `${enclosingName}::Data_::${methodName}() const NN_NOEXCEPT\n`;
             result += `{\n`;
             result += `    ${className}::ValueType rv = (m_Value & ${className}::mask) >> ${className}::shift;\n`;
             result += `    return ` + (hasSymbolicValue(field) ? `static_cast<${valueType}>(rv)`: `rv`) + `;\n`;
             result += `}\n`;
             result += `\n`;
-            result += `inline ${enclosingName}::Data_&\n`;
+            result += `inline auto&\n`;
             result += `${enclosingName}::Data_::${methodName}(${valueType} value) NN_NOEXCEPT\n`;
             result += `{\n`;
             result += `    m_Value &= ~${className}::mask;\n`;
